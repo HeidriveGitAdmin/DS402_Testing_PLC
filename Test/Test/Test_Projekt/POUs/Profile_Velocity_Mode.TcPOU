@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="Profile_Velocity_Mode" Id="{f383ce37-b1b5-4234-9510-fd3b3ed64452}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Profile_Velocity_Mode
+VAR_INPUT
+	NodeID					: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+	Start 					: BOOL;
+	Current_State 			: E_Statemachine_State;	
+	Statusword				: WORD;	
+	Profile_velocity_parameters	: ST_Profile_velocity_parameters;
+END_VAR
+VAR_OUTPUT
+	Controlword 			: WORD;
+	Mode_of_operation 		: E_Mode_of_operation	:= E_Mode_of_operation.No_mode_active;
+	Target_velocity			: DINT;
+	Encoder_offset			: WORD;
+	Finished				: BOOL;
+END_VAR
+VAR
+	Index 			: BYTE := 0;
+	
+	SDO_WRITE		: FB_SDO_WRITE;
+	WriteData		: ARRAY [0..255] OF BYTE;
+	
+	Start_old		: BOOL := FALSE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Restart after complete run
+IF NOT Start_old AND Start THEN
+	Index := 0;
+	Finished := FALSE;
+END_IF
+
+
+CASE Index OF	
+	0: // Switch to state 'Switch on disabled'
+		IF (Start) THEN
+			Mode_of_operation := E_Mode_of_operation.No_mode_active;
+			Target_velocity	:= 0;	
+			Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);
+			IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+				Index := Index + 2;
+			ELSE
+				Index := Index + 1;		
+			END_IF
+		END_IF
+		
+			
+	1: // Wait for 'Switch on disabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+			Index := Index + 1;		
+		END_IF
+		
+		
+	2: // Set Mode of operation and Acceleration
+		Mode_of_operation := E_Mode_of_operation.Profile_velocity_mode;	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);				
+		WriteData[0] := DWORD_TO_BYTE(Profile_velocity_parameters.Profile_acceleration);
+		WriteData[1] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_acceleration,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_acceleration,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_acceleration,24));	
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#6083,
+			CO_SubIndex		:= 16#00,
+			DataLength		:= 4,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+		
+	3: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF	
+		
+		
+	4: // Set Deceleration			
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		WriteData[0] := DWORD_TO_BYTE(Profile_velocity_parameters.Profile_deceleration);
+		WriteData[1] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_deceleration,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_deceleration,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_deceleration,24));	
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#6084,
+			CO_SubIndex		:= 16#00,
+			DataLength		:= 4,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+		
+	5: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF					
+		
+	6: // Set  velocity	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		Target_velocity	:= Profile_velocity_parameters.Target_velocity;
+		Index := Index + 1;		
+		
+	7: // Switch State to 'Operation enabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Operation_enabled);		
+		IF (Current_State = E_Statemachine_State.Operation_enabled) THEN			
+			Index := 255;
+		END_IF
+				
+		
+	255: // Finished 
+		FINISHED := TRUE;
+				
+		
+	ELSE
+		Index := 255;
+			
+END_CASE
+
+
+Start_old := Start;]]></ST>
+    </Implementation>
+    <LineIds Name="Profile_Velocity_Mode">
+      <LineId Id="219" Count="2" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="21" Count="1" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="623" Count="0" />
+      <LineId Id="666" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="232" Count="3" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="228" Count="2" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="745" Count="0" />
+      <LineId Id="693" Count="47" />
+      <LineId Id="692" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="491" Count="1" />
+      <LineId Id="668" Count="0" />
+      <LineId Id="503" Count="0" />
+      <LineId Id="405" Count="0" />
+      <LineId Id="357" Count="4" />
+      <LineId Id="353" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="274" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

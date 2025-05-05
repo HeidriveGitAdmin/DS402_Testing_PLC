@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_Statusword_Bits" Id="{e406abf3-3cb1-4dff-8a75-8b6e0c1a2bab}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_Statusword_Bits :
+(
+    Ready_to_switch_on          := 16#0001,
+    Switched_on                 := 16#0002,
+    Operation_enabled           := 16#0004,
+    Fault                       := 16#0008,
+    Voltage_enabled             := 16#0010,
+    Quick_stop                  := 16#0020,   // Bit is low-active
+    Switch_on_disabled          := 16#0040,
+    Warning                     := 16#0080,
+    Manufacturer_specific_1     := 16#0100,
+    Remote                      := 16#0200,
+    Target_reached              := 16#0400,
+    Internal_limit_active       := 16#0800,
+    Operation_mode_specific_1   := 16#1000,
+    Operation_mode_specific_2   := 16#2000,
+    Manufacturer_specific_2     := 16#4000,
+    Manufacturer_specific_3     := 16#8000,
+
+    // Profile position mode
+    PPM_Set_point_acknowledge   := Operation_mode_specific_1,
+    PPM_Following_error         := Operation_mode_specific_2,
+
+    // Velocity mode
+
+    // Profile velocity mode
+    PVM_Speed                   := Operation_mode_specific_1,
+    PVM_Max_slippage_error      := Operation_mode_specific_2,
+
+    // Profile torque mode
+
+    // Homing mode
+    HM_Homing_attained          := Operation_mode_specific_1,
+    HM_Homing_error             := Operation_mode_specific_2,
+
+    // Interpolated position mode
+    IPM_IP_mode_active          := Operation_mode_specific_1,
+    IPM_Following_error         := Operation_mode_specific_2,
+
+    // Cyclic synchronous position mode
+    CSPM_Drive_follows_the_command_value    := Operation_mode_specific_1,
+    CSPM_Following_error                    := Operation_mode_specific_2,
+
+    // Cyclic synchronous velocity mode
+    CSVM_Drive_follows_the_command_value    := Operation_mode_specific_1,
+
+    // Cyclic synchronous torque mode
+    CSTM_Drive_follows_the_command_value    := Operation_mode_specific_1,
+
+    // Cyclic synchronous torque mode with commutation angle
+    CSTCAM_Drive_follows_the_command_value  := Operation_mode_specific_1
+) WORD ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

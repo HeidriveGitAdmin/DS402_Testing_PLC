@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="ST_CAN_Object_Test" Id="{615d9146-506e-4fa3-8127-ae56655fcd78}">
+    <Declaration><![CDATA[TYPE ST_CAN_Object_Test :
+STRUCT
+	CAN_Object		: ST_CAN_Object;			// The tested CAN Object
+	WriteTest_with_CurrentValue	: BOOL := TRUE;		// Should the SDO Write Test be made with the read value?
+	
+	Error			: BOOL;		// Has an error occurred in at least one test?
+
+	SDO_Read_Done	: BOOL;		// SDO Read is performed		
+	SDO_Read_Error	: DWORD;	// Error number of the SDO Read
+	SDO_Read_Value	: DWORD;	// Received value at the SDO Read
+	
+	SDO_Write_Done	: BOOL;		// SDO Write is performed
+	SDO_Write_Error	: DWORD;	// Error number of the SDO Write
+	SDO_Write_Value	: DWORD;	// Sended value at the SDO Write
+
+	
+	RPDO_Done		: BOOL;		// RPDO Mapping is performed
+	RPDO_Error		: DWORD;	// Error number of the RPDO Mapping
+	
+	TPDO_Done		: BOOL;		// TPDO Mapping is performed
+	TPDO_Error		: DWORD;	// Error number of the TPDO Mapping		
+	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

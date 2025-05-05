@@ -1,0 +1,135 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="CONTROLWORD_STATE_CHANGE" Id="{e061c73d-e1b6-4378-816e-f68084458999}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION CONTROLWORD_STATE_CHANGE : WORD
+VAR_INPUT
+	Current_State 		: E_Statemachine_State;
+	Target_State 		: E_Statemachine_State;	
+END_VAR
+VAR
+	Controlword 		: WORD;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE Current_State OF
+    E_Statemachine_State.Not_ready_to_switch_on:		// Wait for 'Switch on disabled'
+		Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;
+
+	E_Statemachine_State.Switch_on_disabled:
+		CASE Target_State OF
+			E_Statemachine_State.Ready_to_switch_on:	Controlword := E_Statemachine_Transition_Controlword.Ready_to_switch_on;				
+			E_Statemachine_State.Switched_on:			Controlword := E_Statemachine_Transition_Controlword.Ready_to_switch_on;				
+			E_Statemachine_State.Operation_enabled:		Controlword := E_Statemachine_Transition_Controlword.Ready_to_switch_on;				
+		ELSE
+			Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;			
+		END_CASE
+
+	E_Statemachine_State.Ready_to_switch_on:
+		CASE Target_State OF
+			E_Statemachine_State.Switch_on_disabled:	Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;			
+			E_Statemachine_State.Switched_on:			Controlword := E_Statemachine_Transition_Controlword.Switched_on;			
+			E_Statemachine_State.Operation_enabled:		Controlword := E_Statemachine_Transition_Controlword.Switched_on;					
+		ELSE
+			Controlword := E_Statemachine_Transition_Controlword.Ready_to_switch_on;			
+		END_CASE
+				
+	E_Statemachine_State.Switched_on:
+		CASE Target_State OF
+			E_Statemachine_State.Switch_on_disabled:	Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;		
+			E_Statemachine_State.Ready_to_switch_on:	Controlword := E_Statemachine_Transition_Controlword.Ready_to_switch_on;	
+			E_Statemachine_State.Operation_enabled:		Controlword := E_Statemachine_Transition_Controlword.Operation_enabled;				
+		ELSE
+			CONTROLWORD_STATE_CHANGE := E_Statemachine_Transition_Controlword.Switched_on;				
+		END_CASE
+		
+	E_Statemachine_State.Operation_enabled:
+		CASE Target_State OF
+			E_Statemachine_State.Switch_on_disabled:	Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;		
+			E_Statemachine_State.Ready_to_switch_on:	Controlword := E_Statemachine_Transition_Controlword.Ready_to_switch_on;	
+			E_Statemachine_State.Switched_on:			Controlword := E_Statemachine_Transition_Controlword.Switched_on;		
+			E_Statemachine_State.Quick_stop_active:		Controlword := E_Statemachine_Transition_Controlword.Quick_stop_active;				
+		ELSE
+			Controlword := E_Statemachine_Transition_Controlword.Operation_enabled;	;			
+		END_CASE
+		
+	E_Statemachine_State.Quick_stop_active:				
+		CASE Target_State OF
+			E_Statemachine_State.Switch_on_disabled:	Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;		
+			E_Statemachine_State.Ready_to_switch_on:	Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;	
+			E_Statemachine_State.Switched_on:			Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;	
+			E_Statemachine_State.Operation_enabled:		Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;	// Not recommennded to support to switch back directly			
+		ELSE
+			Controlword := 16#2;			
+		END_CASE
+		
+	E_Statemachine_State.Fault_reaction_active:			// Wait for 'Fault'
+		Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;
+		
+	E_Statemachine_State.Fault:
+		CASE Target_State OF
+ 			E_Statemachine_State.Switch_on_disabled, E_Statemachine_State.Ready_to_switch_on, E_Statemachine_State.Switched_on, E_Statemachine_State.Operation_enabled:
+				// Toggle the Fault reset bit
+				IF PDO.Controlword = E_Statemachine_Transition_Controlword.Faultreset_step_2 THEN	Controlword := E_Statemachine_Transition_Controlword.Faultreset_step_1; ELSE Controlword := E_Statemachine_Transition_Controlword.Faultreset_step_2; END_IF
+		ELSE
+			Controlword := E_Statemachine_Transition_Controlword.Switch_on_disabled;
+		END_CASE;
+	
+ELSE
+    Controlword := 16#0;
+	
+END_CASE;
+
+// Return the new controlword
+CONTROLWORD_STATE_CHANGE := Controlword;]]></ST>
+    </Implementation>
+    <LineIds Name="CONTROLWORD_STATE_CHANGE">
+      <LineId Id="24" Count="1" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="71" Count="1" />
+      <LineId Id="100" Count="1" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="86" Count="1" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="92" Count="1" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="94" Count="2" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="52" Count="1" />
+      <LineId Id="102" Count="3" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="106" Count="1" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="118" Count="6" />
+      <LineId Id="115" Count="1" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="58" Count="1" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="64" Count="1" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="37" Count="1" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="20" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

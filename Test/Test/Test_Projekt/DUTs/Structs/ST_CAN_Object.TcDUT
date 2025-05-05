@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="ST_CAN_Object" Id="{c81321fa-27d9-40fb-bcc5-010d85c6d767}">
+    <Declaration><![CDATA[TYPE ST_CAN_Object :
+STRUCT
+	Name			: STRING(32);
+	Index			: WORD := 0;
+	Subindex		: BYTE := 0;
+	Length			: BYTE := 4;
+	Readable		: BOOL := TRUE;
+	Writeable		: BOOL := TRUE;
+	TPDO_Mappable	: BOOL := FALSE;
+	RPDO_Mappable	: BOOL := FALSE;
+	Default_Value	: DWORD := 0;
+	Mandatory		: BYTE := 0;
+	SubElements		: E_SubElement_types := E_SubElement_types.No;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="GET_STATE" Id="{cf56722e-bf50-4ac3-9772-d51513ca1891}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION GET_STATE : E_Statemachine_State
+VAR_INPUT
+	Statusword: WORD;
+END_VAR
+VAR_OUTPUT
+	State: E_Statemachine_State := E_Statemachine_State.unknown;
+END_VAR
+VAR_STAT
+	State_State: ARRAY[0..7] OF E_Statemachine_State := [
+		E_Statemachine_State.Not_ready_to_switch_on,
+		E_Statemachine_State.Switch_on_disabled,
+		E_Statemachine_State.Ready_to_switch_on,
+		E_Statemachine_State.Switched_on,
+		E_Statemachine_State.Operation_enabled,
+		E_Statemachine_State.Quick_stop_active,
+		E_Statemachine_State.Fault_reaction_active,
+		E_Statemachine_State.Fault];
+			
+	State_Statusword: ARRAY[0..7] OF WORD := [ 
+		16#00,	// Not ready to switch on
+		16#40, 	// Switch on disabled
+		16#21, 	// Ready to switch on
+		16#23, 	// Switched on
+		16#27, 	// Operation enable
+		16#07, 	// Quick_stop_active
+		16#0F,	// Fault_reaction_active
+		16#08];	// Fault
+		
+	State_Mask: ARRAY[0..7] OF WORD := [ 
+		16#4F,	// Not ready to switch on
+		16#4F, 	// Switch on disabled
+		16#6F, 	// Ready to switch on
+		16#6F, 	// Switched on
+		16#6F, 	// Operation enable
+		16#6F, 	// Quick_stop_active
+		16#4F,	// Fault_reaction_active
+		16#4F];	// Fault	
+END_VAR
+VAR
+	i: INT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FOR i := 0 TO 7 DO
+	IF (Statusword AND State_Mask[i]) = State_Statusword[i] THEN
+		State := State_State[i];
+		EXIT;
+	END_IF	
+END_FOR
+]]></ST>
+    </Implementation>
+    <LineIds Name="GET_STATE">
+      <LineId Id="107" Count="1" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

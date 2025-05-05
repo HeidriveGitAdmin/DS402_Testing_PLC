@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_Controlmode" Id="{65fb7a46-c119-4bd1-bf4a-52872c444a42}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_Controlmode :
+(
+	IO_Testmode		:= 0,
+	Manual			:= 1,
+	Test_individual	:= 2,
+	Test_sequence	:= 3	
+) BYTE;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

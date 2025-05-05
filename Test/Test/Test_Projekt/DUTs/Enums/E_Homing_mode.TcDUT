@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_Homing_mode" Id="{1520b536-9c2b-418d-9e1e-41905d5c2e03}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_Homing_mode :
+(
+	No_homing_methode_assigned			:= 0,
+	
+	
+    Homing_on_current_position_obsolet 	:= 35,
+    Homing_on_current_position 			:= 37
+) SINT ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <GVL Name="DS402_Object_List" Id="{5d59b60b-5d3e-46b3-88ad-ee3bfe145cf0}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	Abort_connection_option_code									: ST_CAN_Object := (Name:='Abort connection option code', 							Index:=16#6007,				 Length:=2, Default_Value:=1);
+	Error_code														: ST_CAN_Object := (Name:='Error code', 											Index:=16#603F,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	
+	Controlword														: ST_CAN_Object	:= (Name:='Controlword', 											Index:=16#6040,				 Length:=2, RPDO_Mappable:=TRUE);
+	Statusword														: ST_CAN_Object := (Name:='Statusword', 											Index:=16#6041,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	vl_target_velocity												: ST_CAN_Object	:= (Name:='vl target velocity', 									Index:=16#6042,				 Length:=2, RPDO_Mappable:=TRUE);
+	vl_velocity_demand												: ST_CAN_Object	:= (Name:='vl velocity demand', 									Index:=16#6043,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	vl_velocity_actual_value										: ST_CAN_Object := (Name:='vl velocity actual value', 								Index:=16#6044,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	vl_velocity_min_max_amount_Highest_sub_index_supported			: ST_CAN_Object := (Name:='vl velocity min max amount_Highest sub-index supported',	Index:=16#6046,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	vl_velocity_min_max_amount_vl_velocity_min_amount				: ST_CAN_Object := (Name:='vl velocity min max amount_vl velocity min amount', 		Index:=16#6046, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_min_max_amount_vl_velocity_max_amount				: ST_CAN_Object := (Name:='vl velocity min max amount_vl velocity max amount', 		Index:=16#6046, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_acceleration_Highest_sub_index_supported			: ST_CAN_Object := (Name:='vl velocity acceleration_Highest sub-index supported', 	Index:=16#6048,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	vl_velocity_acceleration_Delta_speed							: ST_CAN_Object := (Name:='vl velocity acceleration_Delta speed', 					Index:=16#6048, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_acceleration_Delta_time								: ST_CAN_Object := (Name:='vl velocity acceleration_Delta time', 					Index:=16#6048, Subindex:=2, Length:=2, RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_deceleration_Highest_sub_index_supported			: ST_CAN_Object := (Name:='vl velocity deceleration_Highest sub-index supported', 	Index:=16#6049,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	vl_velocity_deceleration_Delta_speed							: ST_CAN_Object := (Name:='vl velocity deceleration_Delta speed', 					Index:=16#6049, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_deceleration_Delta_time								: ST_CAN_Object := (Name:='vl velocity deceleration_Delta time', 					Index:=16#6049, Subindex:=2, Length:=2, RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_quick_stop_Highest_sub_index_supported				: ST_CAN_Object := (Name:='vl velocity quick stop_Highest sub-index supported', 	Index:=16#604A,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	vl_velocity_quick_stop_Delta_speed								: ST_CAN_Object := (Name:='vl velocity quick stop_Delta speed', 					Index:=16#604A, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_velocity_quick_stop_Delta_time								: ST_CAN_Object := (Name:='vl velocity quick stop_Delta time', 						Index:=16#604A, Subindex:=2, Length:=2, RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_set_point_factor_Highest_sub_index_supported					: ST_CAN_Object := (Name:='vl set-point factor_Highest sub-index supported', 		Index:=16#604B,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	vl_set_point_factor_Numerator									: ST_CAN_Object := (Name:='vl set-point factor_Numerator', 							Index:=16#604B, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_set_point_factor_Denominator									: ST_CAN_Object := (Name:='vl set-point factor_Denominator', 						Index:=16#604B, Subindex:=2, Length:=2, RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_dimension_factor_Highest_sub_index_supported					: ST_CAN_Object := (Name:='vl dimension factor_Highest sub-index supported', 		Index:=16#604C,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	vl_dimension_factor_Numerator									: ST_CAN_Object := (Name:='vl dimension factor_Numerator', 							Index:=16#604C, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	vl_dimension_factor_Denominator									: ST_CAN_Object := (Name:='vl dimension factor_Denominator', 						Index:=16#604C, Subindex:=2, Length:=2, RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	
+	Quick_stop_option_code											: ST_CAN_Object := (Name:='Quick stop option code', 								Index:=16#605A,				 Length:=2, Default_Value:=2);
+	Shutdown_option_code											: ST_CAN_Object := (Name:='Shutdown option code', 									Index:=16#605B,				 Length:=2);
+	Disable_operation_option_code									: ST_CAN_Object := (Name:='Disable operation option code', 							Index:=16#605C,				 Length:=2, Default_Value:=1);
+	Halt_option_code												: ST_CAN_Object := (Name:='Halt option code', 										Index:=16#605D,				 Length:=2, Default_Value:=1);
+	Fault_reaction_option_code										: ST_CAN_Object := (Name:='Fault reaction option code', 							Index:=16#605E,				 Length:=2, Default_Value:=2);
+
+	Modes_of_operation												: ST_CAN_Object := (Name:='Modes of operation', 									Index:=16#6060,				 Length:=1, RPDO_Mappable:=TRUE);
+	Modes_of_operation_display										: ST_CAN_Object := (Name:='Modes of operation display', 							Index:=16#6061,				 Length:=1, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Position_demand_value											: ST_CAN_Object := (Name:='Position demand value', 									Index:=16#6062,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Position_actual_internal_value									: ST_CAN_Object := (Name:='Position actual internal value', 						Index:=16#6063,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Position_actual_value											: ST_CAN_Object := (Name:='Position actual value', 									Index:=16#6064,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Following_error_window											: ST_CAN_Object := (Name:='Following error window', 								Index:=16#6065,				 			RPDO_Mappable:=TRUE);
+	Following_error_time_out										: ST_CAN_Object := (Name:='Following error time out', 								Index:=16#6066,				 Length:=2, RPDO_Mappable:=TRUE);
+	Position_window													: ST_CAN_Object := (Name:='Position window', 										Index:=16#6067,				 			RPDO_Mappable:=TRUE);
+	Position_window_time											: ST_CAN_Object := (Name:='Position window time', 									Index:=16#6068,				 Length:=2, RPDO_Mappable:=TRUE);
+	Velocity_sensor_actual_value									: ST_CAN_Object := (Name:='Velocity sensor actual value', 							Index:=16#6069,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Sensor_selection_code											: ST_CAN_Object := (Name:='Sensor selection code', 									Index:=16#606A,				 			Writeable:=FALSE, RPDO_Mappable:=TRUE);
+	Velocity_demand_value											: ST_CAN_Object := (Name:='Velocity demand value', 									Index:=16#606B,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Velocity_actual_value											: ST_CAN_Object := (Name:='Velocity actual value', 									Index:=16#606C,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Velocity_window													: ST_CAN_Object := (Name:='Velocity window', 										Index:=16#606D,				 Length:=2, RPDO_Mappable:=TRUE);
+	Velocity_window_time											: ST_CAN_Object := (Name:='Velocity window time', 									Index:=16#606E,				 Length:=2, RPDO_Mappable:=TRUE);
+	Velocity_threshold												: ST_CAN_Object := (Name:='Velocity threshold', 									Index:=16#606F,				 Length:=2, RPDO_Mappable:=TRUE);
+	
+	Velocity_threshold_time											: ST_CAN_Object := (Name:='Velocity threshold time', 								Index:=16#6070,				 Length:=2, RPDO_Mappable:=TRUE);
+	Target_torque													: ST_CAN_Object := (Name:='Target torque', 											Index:=16#6071,				 Length:=2, RPDO_Mappable:=TRUE);
+	Max_torque														: ST_CAN_Object := (Name:='Max torque', 											Index:=16#6072,				 Length:=2, RPDO_Mappable:=TRUE);
+	Max_current														: ST_CAN_Object := (Name:='Max current', 											Index:=16#6073,				 Length:=2, RPDO_Mappable:=TRUE);
+	Torque_demand													: ST_CAN_Object := (Name:='Torque demand', 											Index:=16#6074,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Motor_rated_current												: ST_CAN_Object := (Name:='Motor rated current', 									Index:=16#6075);
+	Motor_rated_torque												: ST_CAN_Object := (Name:='Motor rated torque', 									Index:=16#6076);
+	Torque_actual_value												: ST_CAN_Object := (Name:='Torque actual value',	 								Index:=16#6077,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Current_actual_value											: ST_CAN_Object := (Name:='Current actual value', 									Index:=16#6078,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	DC_link_circuit_voltage											: ST_CAN_Object := (Name:='DC link circuit voltage', 								Index:=16#6079,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Target_position													: ST_CAN_Object := (Name:='Target position', 										Index:=16#607A,				 			RPDO_Mappable:=TRUE);
+	Position_range_limit_Highest_sub_index_supported				: ST_CAN_Object := (Name:='Position range limit_Highest sub-index supported', 		Index:=16#607B,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Position_range_limit_Min_position_range_limit					: ST_CAN_Object := (Name:='Position range limit_Min position range limit',			Index:=16#607B, Subindex:=1, 			RPDO_Mappable:=TRUE,					SubElements:=E_SubElement_types.Fix_subelement);
+	Position_range_limit_Max_position_range_limit					: ST_CAN_Object := (Name:='Position range limit_Max position range limit',			Index:=16#607B, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Home_offset														: ST_CAN_Object := (Name:='Home offset', 											Index:=16#607C,				 			RPDO_Mappable:=TRUE);
+	Software_position_limit_Highest_sub_index_supported				: ST_CAN_Object := (Name:='Software position limit_Highest sub-index supported', 	Index:=16#607D,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Software_position_limit_Min_position_limit						: ST_CAN_Object := (Name:='Software position limit_Min position limit',		 		Index:=16#607D, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Software_position_limit_Max_position_limit						: ST_CAN_Object := (Name:='Software position limit_Max position limit', 			Index:=16#607D, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Polarity														: ST_CAN_Object := (Name:='Polarity', 												Index:=16#607E,				 Length:=1, RPDO_Mappable:=TRUE);
+	Max_profile_velocity											: ST_CAN_Object := (Name:='Max profile velocity', 									Index:=16#607F,				 			RPDO_Mappable:=TRUE);
+	
+	Max_motor_speed													: ST_CAN_Object := (Name:='Max motor speed',	 									Index:=16#6080,				 			RPDO_Mappable:=TRUE);
+	Profile_velocity												: ST_CAN_Object := (Name:='Profile velocity', 										Index:=16#6081,				 			RPDO_Mappable:=TRUE);
+	End_velocity													: ST_CAN_Object := (Name:='End velocity', 											Index:=16#6082,				 			RPDO_Mappable:=TRUE);
+	Profile_acceleration											: ST_CAN_Object := (Name:='Profile acceleration', 									Index:=16#6083,				 			RPDO_Mappable:=TRUE);
+	Profile_deceleration											: ST_CAN_Object := (Name:='Profile deceleration', 									Index:=16#6084,				 			RPDO_Mappable:=TRUE);
+	Quick_stop_deceleration											: ST_CAN_Object := (Name:='Quick stop deceleration', 								Index:=16#6085,				 			RPDO_Mappable:=TRUE);
+	Motion_profile_type												: ST_CAN_Object := (Name:='Motion profile type', 									Index:=16#6086,				 Length:=2, RPDO_Mappable:=TRUE);
+	Torque_slope													: ST_CAN_Object := (Name:='Torque slope', 											Index:=16#6087,				 			RPDO_Mappable:=TRUE);
+	Torque_profile_type												: ST_CAN_Object := (Name:='Torque profile type', 									Index:=16#6088,				 Length:=2, RPDO_Mappable:=TRUE);
+	Position_encoder_resolution_Highest_sub_index_supported			: ST_CAN_Object := (Name:='Position encoder resolution_Highest sub-index supported',Index:=16#608F,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Position_encoder_resolution_Encoder_increments					: ST_CAN_Object := (Name:='Position encoder resolution_Encoder increments', 		Index:=16#608F, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Position_encoder_resolution_Motor_revolutions					: ST_CAN_Object := (Name:='Position encoder resolution_Motor revolutions', 			Index:=16#608F, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	
+	Velocity_encoder_resolution_Highest_sub_index_supported			: ST_CAN_Object := (Name:='Velocity encoder resolution_Highest sub-index supported',Index:=16#6090,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Velocity_encoder_resolution_Encoder_increments					: ST_CAN_Object := (Name:='Velocity encoder resolution_Encoder increments', 		Index:=16#6090, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Velocity_encoder_resolution_Motor_revolutions					: ST_CAN_Object := (Name:='Velocity encoder resolution_Motor revolutions', 			Index:=16#6090, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Gear_ratio_Highest_sub_index_supported							: ST_CAN_Object := (Name:='Gear ratio_Highest sub-index supported', 				Index:=16#6091,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Gear_ratio_Motor_shaft_revolutions								: ST_CAN_Object := (Name:='Gear ratio_Motor shaft revolutions', 					Index:=16#6091, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Gear_ratio_Driving_shaft_revolutions							: ST_CAN_Object := (Name:='Gear ratio_Driving shaft revolutions',				 	Index:=16#6091, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Feed_constant_Highest_sub_index_supported						: ST_CAN_Object := (Name:='Feed constant_Highest sub-index supported', 				Index:=16#6092,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Feed_constant_Feed												: ST_CAN_Object := (Name:='Feed constant_Feed', 									Index:=16#6092, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Feed_constant_Shaft_Revolution									: ST_CAN_Object := (Name:='Feed constant_Shaft Revolution', 						Index:=16#6092, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Velocity_Factor_Highest_sub_index_supported						: ST_CAN_Object := (Name:='Velocity Factor_Highest sub-index supported', 			Index:=16#6096,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Velocity_Factor_Numerator										: ST_CAN_Object := (Name:='Velocity Factor_Numerator', 								Index:=16#6096, Subindex:=1, 			RPDO_Mappable:=TRUE, Default_Value:=1, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Velocity_Factor_Divisor											: ST_CAN_Object := (Name:='Velocity Factor_Divisor', 								Index:=16#6096, Subindex:=2, 			RPDO_Mappable:=TRUE, Default_Value:=1, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Acceleration_Factor_Highest_sub_index_supported					: ST_CAN_Object := (Name:='Acceleration Factor_Highest sub-index supported', 		Index:=16#6097,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Acceleration_Factor_Numerator									: ST_CAN_Object := (Name:='Acceleration Factor_Numerator', 							Index:=16#6097, Subindex:=1, 			RPDO_Mappable:=TRUE, Default_Value:=1, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Acceleration_Factor_Divisor										: ST_CAN_Object := (Name:='Acceleration Factor_Divisor', 							Index:=16#6097, Subindex:=2, 			RPDO_Mappable:=TRUE, Default_Value:=1, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Homing_method													: ST_CAN_Object := (Name:='Homing method', 											Index:=16#6098,				 Length:=1, RPDO_Mappable:=TRUE);
+	Homing_speeds_Highest_sub_index_supported						: ST_CAN_Object := (Name:='Homing speeds_Highest sub-index supported', 				Index:=16#6099,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Homing_speeds_Speed_during_search_for_switch					: ST_CAN_Object := (Name:='Homing speeds_Speed during search for switch',			Index:=16#6099, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Homing_speeds_Speed_during_search_for_zero						: ST_CAN_Object := (Name:='Homing speeds_Speed during search for zero', 			Index:=16#6099, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Homing_acceleration												: ST_CAN_Object := (Name:='Homing acceleration', 									Index:=16#609A,				 			RPDO_Mappable:=TRUE);
+	
+	Jerk_factor_Factor_Highest_sub_index_supported					: ST_CAN_Object := (Name:='Jerk factor Factor_Highest sub-index supported', 		Index:=16#60A2,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Jerk_factor_Factor_Numerator									: ST_CAN_Object := (Name:='Jerk factor Factor_Numerator', 							Index:=16#60A2, Subindex:=1, 			Default_Value:=1, 						SubElements:=E_SubElement_types.Fix_subelement);
+	Jerk_factor_Factor_Divisor										: ST_CAN_Object := (Name:='Jerk factor Factor_Divisor', 							Index:=16#60A2, Subindex:=2, 			Default_Value:=1, 						SubElements:=E_SubElement_types.Fix_subelement);
+	Profile_jerk_use												: ST_CAN_Object := (Name:='Profile jerk use', 										Index:=16#60A3,				 Length:=1);	
+	Profile_jerk_Highest_sub_index_supported						: ST_CAN_Object := (Name:='Profile jerk_Highest sub-index supported', 				Index:=16#60A4,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_list);
+	Profile_jerk_1													: ST_CAN_Object := (Name:='Profile jerk 1', 										Index:=16#60A4, Subindex:=1, 													SubElements:=E_SubElement_types.List_element);
+	SI_unit_postion													: ST_CAN_Object := (Name:='SI unit postion', 										Index:=16#60A8);
+	SI_unit_velocity												: ST_CAN_Object := (Name:='SI unit velocity', 										Index:=16#60A9);
+	SI_unit_acceleration											: ST_CAN_Object := (Name:='SI unit acceleration', 									Index:=16#60AA);
+	SI_unit_jerk													: ST_CAN_Object := (Name:='SI unit jerk', 											Index:=16#60AB);
+	
+	Position_offset													: ST_CAN_Object := (Name:='Position offset', 										Index:=16#60B0,				 			RPDO_Mappable:=TRUE);
+	Velocity_offset													: ST_CAN_Object := (Name:='Velocity offset', 										Index:=16#60B1,				 			RPDO_Mappable:=TRUE);
+	Torque_offset													: ST_CAN_Object := (Name:='Torque offset', 											Index:=16#60B2,				 Length:=2, RPDO_Mappable:=TRUE);
+	Touch_probe_mode												: ST_CAN_Object := (Name:='Touch probe mode', 										Index:=16#60B8,				 Length:=2, RPDO_Mappable:=TRUE);
+	Touch_probe_status												: ST_CAN_Object := (Name:='Touch probe status', 									Index:=16#60B9,				 Length:=2, Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_1_positive_edge										: ST_CAN_Object := (Name:='Touch probe 1 positive edge', 							Index:=16#60BA,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_1_negative_edge										: ST_CAN_Object := (Name:='Touch probe 1 negative edge', 							Index:=16#60BB,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_2_positive_edge										: ST_CAN_Object := (Name:='Touch probe 2 positive edge', 							Index:=16#60BC,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_2_negative_edge										: ST_CAN_Object := (Name:='Touch probe 2 negative edge', 							Index:=16#60BD,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	
+	Interpolation_sub_mode_select									: ST_CAN_Object := (Name:='Interpolation sub mode select', 							Index:=16#60C0,				 Length:=2, RPDO_Mappable:=TRUE);
+	Interpolation_data_record_Highest_sub_index_supported			: ST_CAN_Object := (Name:='Interpolation data record_Highest sub-index supported',	Index:=16#60C1,				 Length:=1, Writeable:=FALSE, 						SubElements:=E_SubElement_types.With_list);
+	Interpolation_data_record_First_set_point						: ST_CAN_Object := (Name:='Interpolation data record_First set point', 				Index:=16#60C1, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.List_element);
+	Interpolation_time_period_Highest_sub_index_supported			: ST_CAN_Object := (Name:='Interpolation time period_Highest sub-index supported', 	Index:=16#60C2,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Interpolation_time_period_Interpolation_time_period_value		: ST_CAN_Object := (Name:='Interpolation time period_Interpolation time period value',Index:=16#60C2,Subindex:=1,Length:=1, RPDO_Mappable:=TRUE, Default_Value:=1, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Interpolation_time_period_Interpolation_time_index				: ST_CAN_Object := (Name:='Interpolation time period_Interpolation time index', 	Index:=16#60C2, Subindex:=2, Length:=1, RPDO_Mappable:=TRUE, Default_Value:=-3, SubElements:=E_SubElement_types.Fix_subelement);
+	Interpolation_data_configuration_Highest_sub_index_supported	: ST_CAN_Object := (Name:='Interpolation data configuration_Highest sub-index supported', Index:=16#60C4,		 Length:=1, Writeable:=FALSE, Default_Value:=6, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Interpolation_data_configuration_Maximum_buffer_size 			: ST_CAN_Object := (Name:='Interpolation data configuration_Maximum buffer size', 	Index:=16#60C4, Subindex:=1, Length:=1, Writeable:=FALSE, 						SubElements:=E_SubElement_types.Fix_subelement);
+	Interpolation_data_configuration_Actual_buffer_size				: ST_CAN_Object := (Name:='Interpolation data configuration_Actual buffer size', 	Index:=16#60C4, Subindex:=2, Length:=1, Writeable:=FALSE, RPDO_Mappable:=TRUE, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Interpolation_data_configuration_Buffer_organisation 			: ST_CAN_Object := (Name:='Interpolation data configuration_Buffer organisation', 	Index:=16#60C4, Subindex:=3, Length:=1, Writeable:=FALSE, RPDO_Mappable:=TRUE, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Interpolation_data_configuration_Buffer_position				: ST_CAN_Object := (Name:='Interpolation data configuration_Buffer position', 		Index:=16#60C4, Subindex:=4, Length:=1, Writeable:=FALSE, RPDO_Mappable:=TRUE, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Interpolation_data_configuration_Size_of_data_record 			: ST_CAN_Object := (Name:='Interpolation data configuration_Size of data record', 	Index:=16#60C4, Subindex:=5, Length:=1, Writeable:=FALSE, RPDO_Mappable:=TRUE, Default_Value:=1, SubElements:=E_SubElement_types.Fix_subelement););
+	Interpolation_data_configuration_Buffer_clear					: ST_CAN_Object := (Name:='Interpolation data configuration_Buffer clear', 			Index:=16#60C4, Subindex:=6, Length:=1, Writeable:=FALSE, RPDO_Mappable:=TRUE, 	SubElements:=E_SubElement_types.Fix_subelement);
+	Max_acceleration												: ST_CAN_Object := (Name:='Max acceleration', 										Index:=16#60C5,				 			RPDO_Mappable:=TRUE);
+	Max_deceleration												: ST_CAN_Object := (Name:='Max deceleration', 										Index:=16#60C6,				 			RPDO_Mappable:=TRUE);
+		
+	Touch_probe_source												: ST_CAN_Object := (Name:='Touch probe source',										Index:=16#60D0,				 Length:=2, Writeable:=FALSE);
+	Touch_probe_time_stamp_1_positive_value							: ST_CAN_Object := (Name:='Touch probe time stamp 1 positive value',	 			Index:=16#60D1,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_time_stamp_1_negative_value							: ST_CAN_Object := (Name:='Touch probe time stamp 1 negative value', 				Index:=16#60D2,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_time_stamp_2_positive_value							: ST_CAN_Object := (Name:='Touch probe time stamp 2 positive value', 				Index:=16#60D3,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_time_stamp_2_negative_value							: ST_CAN_Object := (Name:='Touch probe time stamp 2 negative value', 				Index:=16#60D4,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_1_positive_counter									: ST_CAN_Object := (Name:='Touch probe 1 positive counter', 						Index:=16#60D5,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_1_negative_counter									: ST_CAN_Object := (Name:='Touch probe 1 negative counter', 						Index:=16#60D6,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_2_positive_counter									: ST_CAN_Object := (Name:='Touch probe 2 positive counter', 						Index:=16#60D7,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Touch_probe_2_negative_counter									: ST_CAN_Object := (Name:='Touch probe 2 negative counter', 						Index:=16#60D8,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	
+	Positive_torque_limit_value										: ST_CAN_Object := (Name:='Positive torque limit value', 							Index:=16#60E0,				 Length:=2, RPDO_Mappable:=TRUE);
+	Negative_torque_limit_value										: ST_CAN_Object := (Name:='Negative torque limit value', 							Index:=16#60E1,				 Length:=2, RPDO_Mappable:=TRUE);
+	Supported_Homing_Methods_Highest_sub_index_supported			: ST_CAN_Object := (Name:='Supported Homing Methods_Highest sub-index supported', 	Index:=16#60E3,				 Length:=1, Writeable:=FALSE, Default_Value:=5, 	SubElements:=E_SubElement_types.With_list);
+	Supported_Homing_Methods_Supported_homing_method_1				: ST_CAN_Object := (Name:='Supported Homing Methods_Supported homing method 1', 	Index:=16#60E3, Subindex:=1, Length:=1, Writeable:=FALSE, Default_Value:=37,	SubElements:=E_SubElement_types.List_element);
+			
+	Position_option_code											: ST_CAN_Object := (Name:='Position option code', 									Index:=16#60F2,				 Length:=2, RPDO_Mappable:=TRUE);
+	Following_error_actual_value									: ST_CAN_Object := (Name:='Following error actual value', 							Index:=16#60F4,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Max_slippage													: ST_CAN_Object := (Name:='Max slippage', 											Index:=16#60F8,				 			RPDO_Mappable:=TRUE);
+	Control_effort													: ST_CAN_Object := (Name:='Control effort', 										Index:=16#60FA,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Position_demand_integral_value									: ST_CAN_Object := (Name:='Position demand integral value', 						Index:=16#60FC,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Digital_inputs													: ST_CAN_Object := (Name:='Digital inputs', 										Index:=16#60FD,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Digital_outputs_Highest_sub_index_supported						: ST_CAN_Object := (Name:='Digital outputs_Highest sub-index supported', 			Index:=16#60FE,				 Length:=1, Writeable:=FALSE, Default_Value:=2, 	SubElements:=E_SubElement_types.With_fix_subelements);
+	Digital_outputs_Physical_outputs								: ST_CAN_Object := (Name:='Digital outputs_Physical outputs', 						Index:=16#60FE, Subindex:=1, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Digital_outputs_bit_mask										: ST_CAN_Object := (Name:='Digital outputs_Bit mask',			 					Index:=16#60FE, Subindex:=2, 			RPDO_Mappable:=TRUE, 					SubElements:=E_SubElement_types.Fix_subelement);
+	Target_velocity													: ST_CAN_Object := (Name:='Target velocity', 										Index:=16#60FF,				 			RPDO_Mappable:=TRUE);
+	
+	// Motor data
+	Motor_type														: ST_CAN_Object := (Name:='Motor type', 											Index:=16#6402,				 Length:=2);
+	Motor_catalogue_number											: ST_CAN_Object := (Name:='Motor catalogue number', 								Index:=16#6403,				 Length:=0);
+	Motor_manufacturer												: ST_CAN_Object := (Name:='Motor manufacturer', 									Index:=16#6404,				 Length:=0);
+	http_motor_catalogue_address									: ST_CAN_Object := (Name:='http motor catalogue address', 							Index:=16#6405,				 Length:=0);
+	Supported_drive_modes											: ST_CAN_Object := (Name:='Supported drive modes', 									Index:=16#6502,				 			Writeable:=FALSE, TPDO_Mappable:=TRUE);
+	Drive_catalogue_number											: ST_CAN_Object := (Name:='Drive catalogue number', 								Index:=16#6503,				 Length:=0);
+	http_drive_catalogue_address									: ST_CAN_Object := (Name:='http drive catalogue address', 							Index:=16#6505,				 Length:=0);	
+	Version_number													: ST_CAN_Object := (Name:='Version number', 										Index:=16#67FE,				 			Writeable:=FALSE);
+	Single_device_type												: ST_CAN_Object := (Name:='Single device type', 									Index:=16#67FF,				 			Writeable:=FALSE);	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

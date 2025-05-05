@@ -1,0 +1,598 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="WRITE_Manufacturer_label" Id="{70da4c45-a45c-433d-9aa9-64e7022830d4}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK WRITE_Manufacturer_label
+VAR_INPUT
+	Label_In	: ST_Manufacturer_label;
+	NodeID		: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)	
+	Start		: BOOL;
+END_VAR
+VAR_OUTPUT
+	Finished	: BOOL := FALSE;
+END_VAR
+VAR
+	Index		: INT;
+	Label		: ST_Manufacturer_label;
+	SDO_WRITE 	: FB_SDO_WRITE;
+	WriteData		: ARRAY [0..255] OF BYTE;	
+	CAN_Objects: INT;
+	
+	fbTonDelay		: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Restart after complete run
+IF (Index = 255) AND Start THEN
+	Index := 0;
+END_IF
+
+
+IF NOT (Index = 255) THEN 
+	SDO_WRITE(StartWriting:=FALSE);
+	FB_SDO_WRITE_REAL(StartWriting:=FALSE);
+END_IF
+
+
+CASE Index OF	
+	0: 
+		IF Start THEN	
+			Label := Label_In;	
+			Finished := FALSE;
+			WriteData[0] := DWORD_TO_BYTE(Label.Min_v);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Min_v,8));
+			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Min_v,16));
+			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Min_v,24));		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#03,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		END_IF
+	
+	
+	1: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Max_v);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Max_v,8));
+			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Max_v,16));
+			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Max_v,24));		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#04,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+	
+	
+	2: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Motor_rated_current);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Motor_rated_current,8));
+			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Motor_rated_current,16));
+			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Motor_rated_current,24));		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#05,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+	
+	
+	3: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Drive_rated_current);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Drive_rated_current,8));
+			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Drive_rated_current,16));
+			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Drive_rated_current,24));		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#06,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+	
+	
+	4: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Max_current);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Max_current,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#07,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF	
+		
+		
+	5: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Motor_rated_torque);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Motor_rated_torque,8));
+			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Motor_rated_torque,16));
+			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Motor_rated_torque,24));		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#08,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+	
+	
+	6: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Max_torque);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Max_torque,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#09,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	7: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Motor_rated_speed);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Motor_rated_speed,8));
+			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Motor_rated_speed,16));
+			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Motor_rated_speed,24));		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#0A,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+	
+		
+	8: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Number_of_pole_pairs);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Number_of_pole_pairs,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#0B,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	9: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#0C,
+				WriteData		:= Label.Motor_torque_constant,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	10: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#0D,
+				WriteData		:= Label.Flux_producing_P_gain,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	11: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#0E,
+				WriteData		:= Label.Flux_producing_I_gain,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	12: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN	
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#0F,
+				WriteData		:= Label.Torque_producing_P_gain,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	13: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#10,
+				WriteData		:= Label.Torque_producing_I_gain,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	14: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Magnetic_encoder_offset);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Magnetic_encoder_offset,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#11,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	15: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Motor_with_brake);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Motor_with_brake,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#12,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	16: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Encoder_mode_adjust);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Encoder_mode_adjust,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#13,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	17: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := DWORD_TO_BYTE(Label.Motor_max_speed);
+			WriteData[1] := DWORD_TO_BYTE(SHR(Label.Motor_max_speed,8));
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#14,
+				DataLength		:= 2,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	18: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#15,
+				WriteData		:= Label.Rotor_inertia,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+			
+		
+	19: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN		
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#17,
+				WriteData		:= Label.Motor_time_at_peak,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	20: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN		
+			FB_SDO_WRITE_REAL(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#18,
+				WriteData		:= Label.Drive_time_at_peak,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	21: 
+		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
+			WriteData[0] := Label.Singleturn_resolution;
+			WriteData[1] := 0;
+			WriteData[2] := 0;
+			WriteData[3] := 0;			
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#19,
+				DataLength		:= 1,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			FB_SDO_WRITE_REAL();
+		END_IF
+			
+		
+	22: 
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := Label.Multiturn_resolution;
+			WriteData[1] := 0;
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#41C0,
+				CO_SubIndex		:= 16#1A,
+				DataLength		:= 1,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF
+		
+	
+	23: // SAVE
+		IF SDO_WRITE.WriteDataFinished THEN
+			WriteData[0] := 0;
+			WriteData[1] := 0;
+			WriteData[2] := 0;
+			WriteData[3] := 0;		
+			SDO_WRITE(	
+				AdsNetID		:= '5.156.6.243.3.1',
+				PortNr			:= 16#1000 + NodeID,
+				CO_Index		:= 16#1010,
+				CO_SubIndex		:= 16#4,
+				DataLength		:= 4,
+				WriteData		:= WriteData,
+				StartWriting	:= TRUE	
+			);	
+			Index := Index + 1;
+		ELSE
+			SDO_WRITE();
+		END_IF		
+			
+			
+	24: // Wait 500 ms for save process
+		fbTonDelay(IN := TRUE, PT:= T#500MS);
+		IF fbTonDelay.Q THEN
+			fbTonDelay(IN := FALSE);
+			Index := Index + 1;	
+		END_IF
+		
+		
+	255: // Finished 
+		Finished := TRUE;
+			
+		
+	ELSE
+		Index := 255;
+	
+END_CASE	
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="WRITE_Manufacturer_label">
+      <LineId Id="20" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="689" Count="0" />
+      <LineId Id="691" Count="3" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="695" Count="0" />
+      <LineId Id="23" Count="1" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="609" Count="0" />
+      <LineId Id="669" Count="0" />
+      <LineId Id="78" Count="11" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="33" Count="1" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="100" Count="13" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="98" Count="1" />
+      <LineId Id="96" Count="1" />
+      <LineId Id="114" Count="18" />
+      <LineId Id="134" Count="23" />
+      <LineId Id="219" Count="0" />
+      <LineId Id="159" Count="17" />
+      <LineId Id="216" Count="1" />
+      <LineId Id="177" Count="38" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="239" Count="19" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="262" Count="22" />
+      <LineId Id="289" Count="4" />
+      <LineId Id="295" Count="5" />
+      <LineId Id="302" Count="4" />
+      <LineId Id="311" Count="4" />
+      <LineId Id="317" Count="10" />
+      <LineId Id="332" Count="4" />
+      <LineId Id="338" Count="10" />
+      <LineId Id="353" Count="4" />
+      <LineId Id="359" Count="10" />
+      <LineId Id="374" Count="4" />
+      <LineId Id="380" Count="94" />
+      <LineId Id="479" Count="4" />
+      <LineId Id="485" Count="10" />
+      <LineId Id="500" Count="4" />
+      <LineId Id="506" Count="10" />
+      <LineId Id="521" Count="4" />
+      <LineId Id="527" Count="10" />
+      <LineId Id="575" Count="2" />
+      <LineId Id="541" Count="33" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="630" Count="0" />
+      <LineId Id="612" Count="17" />
+      <LineId Id="610" Count="1" />
+      <LineId Id="655" Count="1" />
+      <LineId Id="663" Count="1" />
+      <LineId Id="668" Count="0" />
+      <LineId Id="665" Count="0" />
+      <LineId Id="658" Count="0" />
+      <LineId Id="650" Count="0" />
+      <LineId Id="659" Count="0" />
+      <LineId Id="651" Count="2" />
+      <LineId Id="29" Count="3" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

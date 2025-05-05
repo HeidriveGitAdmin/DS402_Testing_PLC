@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_SubElement_Types" Id="{1443e881-0bc3-4e51-a57b-e72a684a99fb}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_SubElement_Types :
+(
+	No 						:= 0,
+	
+	With_fix_subelements	:= 1,
+	With_list 				:= 2,
+	
+	Fix_subelement			:= 17,	
+	List_element			:= 18
+) BYTE;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

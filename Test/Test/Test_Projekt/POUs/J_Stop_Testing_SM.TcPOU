@@ -1,0 +1,267 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+  <POU Name="J_Stop_Testing_SM" Id="{c231d705-6bba-41a2-9ea5-2d7b22a70d02}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK J_Stop_Testing_SM
+VAR_INPUT
+	NodeID			: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+	Start_Testing	: BOOL; (* Send True to start the Stop Testing*)
+	Statusword		: WORD;	
+	
+END_VAR
+VAR_OUTPUT
+	Finished 		: BOOL;
+END_VAR
+VAR
+	e_Stop_Testing_State_Machine : (Idle,
+									Start_Drive, 
+									Check_Start_Drive_Condition,
+									Stop_Testing, 
+									Check_Stop_Drive_Condition,
+									Error_Handling) := Idle; 
+									
+	e_Operation_Mode : E_Mode_of_operation := E_Mode_of_operation.Profile_position_mode;
+	
+	e_Stop_Mode :  (Switch_On,					//schnell runterrampen -> Switched on
+					Shutdown,					//Disable PS
+					Disable_Voltage,			//Disable PS
+					Vel_To_Zero,				//Ramp down
+					Halt,						//stillstand mit dehmoment -> Weiterdrehen
+					Quick_Stop,					//schnell runterrampen -> Switch on Disabled
+					Fault,						//DISABLE PS
+					STO1,						//Disable PS
+					STO2,						//Disable PS
+					END) := Switch_On;
+					
+	e_Stop_Type :  (Idle_Output_Stage,
+				    Ramp_Down,
+					Vel_Zero,
+					Quick_Stop);
+					
+	
+	Velocity_parameters	: ST_Velocity_parameters := (vl_target_velocity 	  := 1000,
+													 vl_velocity_acceleration := 1000,
+													 vl_velocity_deceleration := 1000);
+	vl_target_velocity	: INT := 0;
+	Target_State: E_STATEMACHINE_STATE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE e_Stop_Testing_State_Machine OF
+	
+	Idle:
+		IF Start_Testing THEN
+			e_Stop_Testing_State_Machine := Start_Drive;
+		ELSE
+			e_Stop_Testing_State_Machine := Idle;
+		END_IF
+		
+//---------------------Start Drive SM-----------------------------------
+	Start_Drive:
+	
+		CASE e_Operation_Mode OF
+			
+			e_Operation_Mode.Profile_position_mode:
+				// Vel = 1000 ; Acc = 1000 ; Dec = 500, Pos = 10000000
+				PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_velocity_mode;
+				vl_target_velocity 		:= ST_Velocity_parameters.vl_target_velocity;
+				Target_State 			:= E_statemachine_state.Operation_enabled;
+				
+				e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+				
+			e_Operation_Mode.Velocity_mode:
+				// Vel = 1000
+				// // Start Drive, Wait for SDO written then change state
+				e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+				
+			e_Operation_Mode.Profile_velocity_mode:
+				// Vel = 1000 ; Acc = 1000 ; Dec = 500
+				// Start Drive, Wait for SDO written then change state
+				e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+				
+			e_Operation_Mode.Profile_torque_mode:
+				// Torque = 100 pro mill
+				// Start Drive, Wait for SDO written then change state
+				e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+		END_CASE
+		
+		
+//------------------Check Drive Condition SM-----------------------------
+	Check_Start_Drive_Condition:
+	
+		CASE e_Operation_Mode OF
+			
+			e_Operation_Mode.Profile_position_mode:
+				// Check acc and dec
+				// Wait for desired speed 
+				// true change state / false wirte msg log
+			e_Operation_Mode.Velocity_mode:
+				// Wait for desired speed 
+				// true change state / false wirte msg log
+			e_Operation_Mode.Profile_velocity_mode:
+				// Check acc and dec
+				// Wait for desired speed 
+				// true change state / false wirte msg log
+			e_Operation_Mode.Profile_torque_mode:
+				// check torque
+				// true change state / false wirte msg log
+		END_CASE
+		
+//------------------Stop Testing SM--------------------------------------		
+	Stop_Testing:
+	
+		CASE e_Operation_Mode OF
+		//----------testing in Profile Position Mode---------------------
+			e_Operation_Mode.Profile_position_mode:
+					
+				CASE e_Stop_Mode OF
+					Switch_On:
+						//Trigger Stopp
+						e_Stop_Mode := Shutdown;
+						e_Stop_Type := Idle_Output_Stage;
+					Shutdown:
+						//Trigger Stopp
+						e_Stop_Mode := Disable_Voltage;
+						e_Stop_Type := Idle_Output_Stage;
+					Disable_Voltage:
+						//Trigger Stopp
+						e_Stop_Mode := Vel_To_Zero;
+						e_Stop_Type := Idle_Output_Stage;
+					Vel_To_Zero:
+						//Trigger Stopp
+						e_Stop_Mode := Halt;
+						e_Stop_Type := Vel_Zero;
+					Halt:
+						//Trigger Stopp
+						e_Stop_Mode := Quick_Stop;
+						e_Stop_Type := Vel_Zero;
+					Quick_Stop:
+						//Trigger Stopp
+						e_Stop_Mode := Fault;
+						e_Stop_Type := Quick_Stop;
+					Fault:
+						//Trigger Stopp
+						e_Stop_Mode := STO1;
+						e_Stop_Type := Idle_Output_Stage;
+					STO1:
+						//Trigger Stopp
+						e_Stop_Mode := STO2;
+						e_Stop_Type := Idle_Output_Stage;
+					STO2:
+						//Trigger Stopp
+						e_Stop_Mode := Switch_On;
+						e_Stop_Type := Idle_Output_Stage;
+						
+						e_Operation_Mode := e_Operation_Mode.Velocity_mode;
+				END_CASE
+				e_Stop_Testing_State_Machine := Check_Stop_Drive_Condition;
+				
+			e_Operation_Mode.Velocity_mode:
+				;
+			e_Operation_Mode.Profile_velocity_mode:
+				;
+			e_Operation_Mode.Profile_torque_mode:
+				;
+		END_CASE
+//---------------------Check Drive Stop------------------------------		
+	Check_Stop_Drive_Condition:
+		
+		CASE e_Stop_Type OF
+			
+			Idle_Output_Stage:
+				// Check for 
+			Ramp_Down:
+				;
+			Vel_Zero:
+				;
+			Quick_Stop:
+				;
+		END_CASE
+	Error_Handling:
+		;
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="J_Stop_Testing_SM">
+      <LineId Id="1" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="230" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="231" Count="1" />
+      <LineId Id="120" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="128" Count="1" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="118" Count="1" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="152" Count="3" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="173" Count="36" />
+      <LineId Id="217" Count="0" />
+      <LineId Id="211" Count="1" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="142" Count="0" />
+      <LineId Id="144" Count="3" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="229" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="223" Count="5" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="4" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

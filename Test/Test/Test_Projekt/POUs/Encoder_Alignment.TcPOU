@@ -1,0 +1,247 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="Encoder_Alignment" Id="{fffc2c42-72de-4382-ac9e-13e5655c61af}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Encoder_Alignment
+VAR_INPUT
+	NodeID			: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+	Start 			: BOOL;
+	Current_State 	: E_Statemachine_State;	
+	Statusword		: WORD;	
+END_VAR
+VAR_OUTPUT
+	Controlword 	: WORD;
+	Encoder_offset	: WORD;
+	Finished		: BOOL;
+END_VAR
+VAR
+	Index 			: BYTE := 0;
+	
+	SDO_WRITE		: FB_SDO_WRITE;
+	WriteData		: ARRAY [0..255] OF BYTE;
+	
+	SDO_READ		: FB_SDO_READ;
+	ReadStart		: BOOL;
+	ReadError		: DWORD;
+	ReadData		: ARRAY [0..255] OF BYTE;
+	
+	fbTonDelay		: TON;
+	Start_old		: BOOL := FALSE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Restart after complete run
+IF NOT Start_old AND Start THEN
+	Index := 0;
+	Finished := FALSE;
+END_IF
+
+
+CASE Index OF	
+	0: // Switch to state 'Switch on disabled'
+		IF (Start) THEN
+			Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);
+			IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+				Index := Index + 2;
+			ELSE
+				Index := Index + 1;		
+			END_IF
+		END_IF
+		
+			
+	1: // Wait for 'Switch on disabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+			Index := Index + 1;		
+		END_IF
+					
+		
+	2: // Set Mode of operation
+		PDO.Mode_of_operation := E_Mode_of_operation.Phasing_mode;	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);				
+		IF (PDO.Mode_of_operation_display = E_Mode_of_operation.Phasing_mode) THEN			
+			Index := Index + 1;		
+		END_IF
+
+		
+	3: // Start
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Operation_enabled);	
+		IF ((Current_State = E_Statemachine_State.Operation_enabled) AND ((Statusword AND E_Statusword_Bits.Manufacturer_specific_3) <> 0)) THEN			
+			Index := Index + 1;		
+		END_IF
+		
+		
+	4: // Wait for finish
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Operation_enabled);			
+		IF ((Statusword AND E_Statusword_Bits.Manufacturer_specific_3) = 0) THEN			
+			Index := Index + 1;		
+		END_IF
+	
+		
+	5: // Switch State to 'Switch on disabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+			Index := Index + 1;
+		END_IF
+		
+		
+	6: // Save		
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		WriteData[0] := 16#73;	// s
+		WriteData[1] := 16#61;	// a
+		WriteData[2] := 16#76;	// v
+		WriteData[3] := 16#65;	// e		
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#1010,
+			CO_SubIndex		:= 16#04,
+			DataLength		:= 4,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+
+		
+	7: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF		
+		
+		
+	8: // Wait 500 ms for save process
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		fbTonDelay(IN := TRUE, PT:= T#500MS);
+		IF fbTonDelay.Q THEN
+			fbTonDelay(IN := FALSE);
+			Index := Index + 1;	
+		END_IF
+		
+		
+	9: // Read the alignment offset
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_READ(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#41C0,
+			CO_SubIndex		:= 16#11,
+			DataLength		:= 2,
+			StartReading	:= TRUE	
+		);	
+		Index := Index + 1;	
+		
+		
+	10: // Wait for finish sdo transfer
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_Read(StartReading := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN			
+			Encoder_offset := SHL(BYTE_TO_WORD(SDO_READ.ReadData[1]),8) + BYTE_TO_WORD(SDO_READ.ReadData[0]);
+			Index := 255;			
+		END_IF	
+			
+		
+	255: // Finished 
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		FINISHED := TRUE;
+				
+		
+	ELSE
+		Index := 255;
+			
+END_CASE
+
+
+Start_old := Start;]]></ST>
+    </Implementation>
+    <LineIds Name="Encoder_Alignment">
+      <LineId Id="219" Count="2" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="21" Count="1" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="232" Count="3" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="228" Count="2" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="108" Count="1" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="174" Count="0" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="112" Count="1" />
+      <LineId Id="96" Count="1" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="207" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="122" Count="1" />
+      <LineId Id="119" Count="1" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="44" Count="12" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="242" Count="1" />
+      <LineId Id="247" Count="1" />
+      <LineId Id="245" Count="1" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="135" Count="2" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="155" Count="5" />
+      <LineId Id="162" Count="1" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="167" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="142" Count="1" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="144" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="217" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="274" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

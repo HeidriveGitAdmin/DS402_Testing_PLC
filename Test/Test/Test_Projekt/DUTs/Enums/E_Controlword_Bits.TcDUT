@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_Controlword_Bits" Id="{29b76b96-f3e9-483b-bcad-7280ef6a02c6}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_Controlword_Bits :
+(
+	Switch_on                   := 16#0001,
+    Enable_voltage              := 16#0002,
+    Quick_stop                  := 16#0004,   // Bit is low-active
+    Enable_operation            := 16#0008,
+    Operation_mode_specific_1   := 16#0010,
+    Operation_mode_specific_2   := 16#0020,
+    Operation_mode_specific_3   := 16#0040,
+    Fault_reset                 := 16#0080,
+    Halt                        := 16#0100,
+    Operation_mode_specific_4   := 16#0200,
+    Manufacturer_specific_1     := 16#0400,
+    Manufacturer_specific_2     := 16#0800,
+    Manufacturer_specific_3     := 16#1000,
+    Manufacturer_specific_4     := 16#2000,
+    Manufacturer_specific_5     := 16#4000,
+    Manufacturer_specific_6     := 16#8000,
+	
+    // Profile position mode
+    PPM_New_set_point           := Operation_mode_specific_1,
+    PPM_Change_set_immediately  := Operation_mode_specific_2,
+    PPM_Absolut_relative        := Operation_mode_specific_3,
+    PPM_Change_on_setpoint      := Operation_mode_specific_4,
+
+    // Velocity mode
+    VM_Enable_ramp              := Operation_mode_specific_1,
+    VM_Unlock_ramp              := Operation_mode_specific_2,
+    VM_Reference_ramp           := Operation_mode_specific_3,
+
+    // Profile velocity mode
+
+    // Profile torque mode
+
+    // Homing mode
+    HM_Homing_operation_start   := Operation_mode_specific_1,
+
+    // Interpolated position mode
+    IPM_Enable_interpolation    := Operation_mode_specific_1
+
+    // Cyclic synchronous position mode
+
+    // Cyclic synchronous velocity mode
+
+    // Cyclic synchronous torque mode
+
+    // Cyclic synchronous torque mode with commutation angle
+
+) WORD ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

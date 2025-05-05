@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="FB_NMT_WRITE" Id="{9b992818-4ace-41a1-a0d2-08c08c5afb16}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_NMT_WRITE
+VAR_INPUT
+	ADSNetID		: STRING(23); 	(* The AMSNetID addresses the EL6751. Can be empty if only one local single channel card is present*)
+	PortNr			: WORD; 		(* The Port No. addresses the CANopen Node (see System Manager) *)
+	ADSSTATE		: UINT; 		(* This is the value of the ADS state (ADSSTATE_RUN (=5) or ADSSTATE_STOP (=6)*)
+	DEVSTATE		: UINT;			(* This is the value of the wanted device state (ADSSTATE_RUN -> 1 = OP, 0 = PREOP or ADSSTATE_STOP -> 0 = STOP)*)
+	StartWriting	: BOOL; 		(* only reset to FALSE after WriteDataFinished=TRUE*)
+END_VAR
+VAR_OUTPUT
+	WriteDataFinished	: BOOL;
+	Error			: DWORD;
+END_VAR
+VAR
+	state			: BYTE := 0;
+	ADSWRTCTL		: ADSWRTCTL;
+	NMTData			: ARRAY[0..1] OF BYTE; (*This array contains the data to be written to the CANopen Object	Dictionary*)
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE
+state OF
+0:
+	IF StartWriting THEN
+		WriteDataFinished := FALSE;
+		Error := 0;
+		ADSWRTCTL(
+			NetID		:= ADSNetID,
+			PORT		:= PortNr,
+			ADSSTATE	:= ADSSTATE,
+			DEVSTATE	:= DEVSTATE,
+			LEN			:= 2,
+			SRCADDR		:= ADR(NMTData),
+			WRITE		:= TRUE,
+			TMOUT 		:= T#1S
+		);	
+		IF ADSWRTCTL.err THEN
+			state := 2;
+			WriteDataFinished := TRUE;
+			Error := ADSWRTCTL.ErrId;
+		ELSE
+			state := 1;
+		END_IF
+	ELSE
+		ADSWRTCTL(
+			NetID		:= ADSNetID,
+			PORT		:= PortNr,
+			ADSSTATE	:= ADSSTATE, 
+			DEVSTATE	:= DEVSTATE,
+			LEN			:= 2, 
+			SRCADDR		:= ADR(NMTData),
+			WRITE		:= FALSE,
+			TMOUT 		:= T#1S
+		);
+	END_IF
+	
+1:
+	ADSWRTCTL(WRITE:= FALSE);
+	IF ADSWRTCTL.err THEN
+		state := 2;
+		WriteDataFinished := TRUE;
+		Error := ADSWRTCTL.ErrId;
+	ELSE
+		IF NOT ADSWRTCTL.busy THEN
+			state := 2;
+			WriteDataFinished := TRUE;
+		END_IF
+	END_IF
+	
+2:
+	ADSWRTCTL(WRITE:= FALSE);
+	state := 0;
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="FB_NMT_WRITE">
+      <LineId Id="28" Count="5" />
+      <LineId Id="97" Count="8" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="44" Count="7" />
+      <LineId Id="110" Count="5" />
+      <LineId Id="58" Count="21" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

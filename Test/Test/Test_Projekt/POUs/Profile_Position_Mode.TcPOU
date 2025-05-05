@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+  <POU Name="Profile_Position_Mode" Id="{1661e037-98c5-41aa-8d8d-de500405694e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Profile_Position_Mode
+VAR_INPUT
+	Current_State 	: E_Statemachine_State;	
+	Statusword		: WORD;
+END_VAR
+VAR_IN_OUT
+	Controlword 	: WORD;
+	Start 			: BOOL;
+END_VAR
+VAR_OUTPUT
+	Finished		: BOOL;
+END_VAR
+VAR
+	Index 			: BYTE := 0;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Start THEN Index := 0; END_IF;
+
+CASE Index OF	
+	0: // Set Position
+		IF (Statusword AND E_Statusword_Bits.PPM_Set_point_acknowledge) = E_Statusword_Bits.PPM_Set_point_acknowledge THEN
+			Controlword := Controlword AND NOT E_Controlword_Bits.PPM_New_set_point;
+			Index := 1;
+		ELSE
+			Controlword := Controlword OR E_Controlword_Bits.PPM_New_set_point;				
+		END_IF
+		
+		
+	1: // Position reached?
+		FINISHED :=  ((Statusword AND E_Statusword_Bits.Target_reached) = E_Statusword_Bits.Target_reached);
+						
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="Profile_Position_Mode">
+      <LineId Id="75" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="66" Count="1" />
+      <LineId Id="32" Count="3" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_Mode_of_operation" Id="{6820d06f-d51a-4f07-86a5-bf8d9bcf43e0}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_Mode_of_operation :
+(
+    No_mode_active                      := 0,
+    Profile_position_mode               := 1,
+    Velocity_mode                       := 2,
+    Profile_velocity_mode               := 3,
+    Profile_torque_mode                 := 4,
+    Reserved                            := 5,
+    Homing_mode                         := 6,
+    Interpolated_position_mode          := 7,
+    Cyclic_synchronous_position_mode    := 8,
+    Cyclic_synchronous_velocity_mode    := 9,
+    Cyclic_synchronous_torque_mode      := 10,
+    Cyclic_synchronous_torque_mode_with_commutation_angle           := 11,
+    Profile_position_mode_with_an_additional_feedback               := 12,
+    Profile_velocity_mode_with_an_additional_feedback               := 13,
+    Homing_mode_with_an_additional_feedback                         := 14,
+    Cyclic_synchronous_position_mode_with_an_additional_feedback    := 15,
+    Cyclic_synchronous_velocity_mode_with_an_additional_feedback    := 16,
+	
+	Phasing_mode						:= -121,
+	Open_loop_voltage					:= -122,
+	Non_commutated_current_mode			:= -123
+) SINT ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

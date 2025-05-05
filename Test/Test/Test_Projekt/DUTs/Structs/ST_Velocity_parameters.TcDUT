@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="ST_Velocity_parameters" Id="{4993a23f-e6cc-460c-bc20-71024b03ed80}">
+    <Declaration><![CDATA[TYPE ST_Velocity_parameters :
+STRUCT
+	vl_target_velocity			: INT;		// 0x6042, 0, 16 bit
+	vl_velocity_acceleration	: DWORD;	// 0x6048, 0, 32 bit
+	vl_velocity_deceleration	: DWORD;	// 0x6049, 0, 32 bit
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

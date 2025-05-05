@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="ST_Homing_parameters" Id="{d2cf1229-109a-44cb-bccc-b072b91f9f53}">
+    <Declaration><![CDATA[TYPE ST_Homing_parameters :
+STRUCT
+	Homing_mode		: E_Homing_mode;		// 0x6098, 0, 8 bit
+	Speed_switch	: DWORD;				// 0x6099, 1, 32 bit
+	Speed_zero		: DWORD;				// 0x6099, 2, 32 bit
+	Acceleration	: DWORD;				// 0x609A, 0, 32 bit
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,285 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="Homing_Mode" Id="{ccc83746-f290-45c8-8130-00bcc4c808c0}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Homing_Mode
+VAR_INPUT
+	NodeID				: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+	Start 				: BOOL;
+	Current_State 		: E_Statemachine_State;	
+	Statusword			: WORD;	
+	Homing_parameters	: ST_Homing_parameters;
+END_VAR
+VAR_OUTPUT
+	Controlword 		: WORD;
+	Mode_of_operation 	: E_Mode_of_operation	:= E_Mode_of_operation.No_mode_active;
+	Finished			: BOOL;
+END_VAR
+VAR
+	Index 			: BYTE := 0;
+	
+	SDO_WRITE		: FB_SDO_WRITE;
+	WriteData		: ARRAY [0..255] OF BYTE;
+	
+	SDO_READ		: FB_SDO_READ;
+	ReadStart		: BOOL;
+	ReadError		: DWORD;
+	ReadData		: ARRAY [0..255] OF BYTE;
+	
+	fbTonDelay		: TON;
+	Start_old		: BOOL := FALSE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Restart after complete run
+IF NOT Start_old AND Start THEN
+	Index := 0;
+	Finished := FALSE;
+END_IF
+
+
+CASE Index OF	
+	0: // Switch to state 'Switch on disabled'
+		IF (Start) THEN
+			Mode_of_operation := E_Mode_of_operation.No_mode_active;
+			Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);
+			IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+				Index := Index + 2;
+			ELSE
+				Index := Index + 1;		
+			END_IF
+		END_IF
+		
+			
+	1: // Wait for 'Switch on disabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		IF (Current_State = E_Statemachine_State.Switch_on_disabled) THEN			
+			Index := Index + 1;		
+		END_IF
+					
+		
+	2: // Set Mode of operation
+		Mode_of_operation := E_Mode_of_operation.Homing_mode;	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);				
+		IF (PDO.Mode_of_operation_display = E_Mode_of_operation.Homing_mode) THEN			
+			IF Homing_parameters.Homing_mode = E_Homing_mode.Homing_on_current_position THEN
+				Index := Index + 1 + 3*2;
+			ELSE
+				Index := Index + 1;		
+			END_IF
+		END_IF
+
+		
+	3: // Set Speed during search for switch		
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		WriteData[0] := DWORD_TO_BYTE(Homing_parameters.Speed_switch);
+		WriteData[1] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_switch,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_switch,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_switch,24));	
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#6099,
+			CO_SubIndex		:= 16#01,
+			DataLength		:= 4,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+		
+	4: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF	
+		
+		
+	5: // Set Spped during search for zero			
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		WriteData[0] := DWORD_TO_BYTE(Homing_parameters.Speed_zero);
+		WriteData[1] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_zero,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_zero,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_zero,24));	
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#6099,
+			CO_SubIndex		:= 16#02,
+			DataLength		:= 4,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+		
+	6: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF		
+		
+		
+	7: // Set Homing acceleration		
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		WriteData[0] := DWORD_TO_BYTE(Homing_parameters.Acceleration);
+		WriteData[1] := DWORD_TO_BYTE(SHR(Homing_parameters.Acceleration,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(Homing_parameters.Acceleration,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(Homing_parameters.Acceleration,24));	
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#609A,
+			CO_SubIndex		:= 16#00,
+			DataLength		:= 4,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+		
+	8: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF	
+		
+		
+	9: // Set Homing mode		
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		WriteData[0] := Homing_parameters.Homing_mode;
+		SDO_WRITE(	
+			AdsNetID		:= '5.156.6.243.3.1',
+			PortNr			:= 16#1000 + NodeID,
+			CO_Index		:= 16#6098,
+			CO_SubIndex		:= 16#00,
+			DataLength		:= 1,
+			WriteData		:= WriteData,
+			StartWriting	:= TRUE	
+		);	
+		Index := Index + 1;		
+		
+	10: // Wait for finish sdo transfer	
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		SDO_WRITE(StartWriting := FALSE);
+		IF SDO_WRITE.WriteDataFinished THEN
+			Index := Index + 1;			
+		END_IF		
+		
+		
+	11: // Switch State to 'Operation enabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Operation_enabled);		
+		IF (Current_State = E_Statemachine_State.Operation_enabled) THEN			
+			Index := Index + 1;
+		END_IF
+		
+		
+	12: // Start homing and wait for finish
+		Controlword := 16#1F;		
+		IF (Statusword AND E_Statusword_Bits.HM_Homing_attained) <> 0 THEN			
+			Index := Index + 1;		
+		END_IF
+	
+		
+	13: // Switch State to 'Switch on disabled'
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		IF Current_State = E_Statemachine_State.Switch_on_disabled THEN			
+			Index := 255;
+		END_IF
+		
+		
+	255: // Finished 
+		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
+		FINISHED := TRUE;
+				
+		
+	ELSE
+		Index := 255;
+			
+END_CASE
+
+
+Start_old := Start;]]></ST>
+    </Implementation>
+    <LineIds Name="Homing_Mode">
+      <LineId Id="219" Count="2" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="21" Count="1" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="594" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="232" Count="3" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="228" Count="2" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="433" Count="0" />
+      <LineId Id="435" Count="0" />
+      <LineId Id="439" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="438" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="489" Count="0" />
+      <LineId Id="468" Count="0" />
+      <LineId Id="535" Count="1" />
+      <LineId Id="556" Count="2" />
+      <LineId Id="537" Count="16" />
+      <LineId Id="534" Count="0" />
+      <LineId Id="554" Count="1" />
+      <LineId Id="469" Count="1" />
+      <LineId Id="559" Count="2" />
+      <LineId Id="471" Count="17" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="175" Count="0" />
+      <LineId Id="491" Count="1" />
+      <LineId Id="562" Count="2" />
+      <LineId Id="493" Count="16" />
+      <LineId Id="490" Count="0" />
+      <LineId Id="510" Count="0" />
+      <LineId Id="533" Count="0" />
+      <LineId Id="330" Count="2" />
+      <LineId Id="336" Count="9" />
+      <LineId Id="347" Count="5" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="356" Count="0" />
+      <LineId Id="405" Count="0" />
+      <LineId Id="357" Count="4" />
+      <LineId Id="353" Count="1" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="207" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="122" Count="1" />
+      <LineId Id="119" Count="1" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="217" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="274" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

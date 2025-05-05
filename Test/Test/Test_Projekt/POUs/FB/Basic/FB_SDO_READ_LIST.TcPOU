@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="FB_SDO_READ_LIST" Id="{67d36b31-693a-4cfe-a912-953ee324c4bf}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_SDO_READ_LIST
+VAR_INPUT
+	NodeID			: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+	Start			: BOOL;
+END_VAR
+VAR_OUTPUT	
+	Finished		: BOOL;
+END_VAR
+VAR_IN_OUT
+	CAN_Objects		: ARRAY [*] OF ST_CAN_Object_Test;
+END_VAR
+VAR
+	State			: BYTE := 0;
+	Index			: DINT := 0;
+
+	SDO_READ		: FB_SDO_READ;
+	ReadData		: ARRAY [0..255] OF BYTE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Start AND State = 255 THEN 
+	State := 0;
+	Index := 0;
+END_IF
+
+SDO_READ(StartReading:=FALSE);
+
+CASE State OF	
+	0:	// Read Object
+		IF CAN_Objects[Index].CAN_Object.Readable THEN
+			SDO_READ(
+				ADSNetID		:= '5.156.6.243.3.1',				
+				PortNr 		 	:= 16#1000 + NodeID,
+				CO_Index 		:= CAN_Objects[Index].CAN_Object.Index,
+				CO_SubIndex 	:= CAN_Objects[Index].CAN_Object.Subindex,
+				DataLength 		:= CAN_Objects[Index].CAN_Object.Length,
+				StartReading	:= TRUE	);
+			
+			IF SDO_READ.ReadDataAvailable THEN
+				CAN_Objects[Index].SDO_Read_Done := TRUE;
+				CAN_Objects[Index].SDO_Read_Value := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);				
+				CAN_Objects[Index].SDO_Read_Error := SDO_READ.Error;
+		
+				State := State + 1;
+			END_IF
+		ELSE
+			// Not done -> Result
+			CAN_Objects[Index].SDO_Read_Done := FALSE;
+			CAN_Objects[Index].SDO_Read_Value := 0;				
+			CAN_Objects[Index].SDO_Read_Error := 0;
+						
+			State := State + 1;	
+		END_IF
+	
+	
+		
+	1: // Next object
+		CAN_Objects[Index].Error := (CAN_Objects[Index].SDO_Read_Error > 0) OR (CAN_Objects[Index].SDO_Write_Error > 0) OR (CAN_Objects[Index].RPDO_Error > 0) OR (CAN_Objects[Index].TPDO_Error > 0);
+			
+		IF Index < UPPER_BOUND(CAN_Objects,1) THEN
+			Index := Index + 1;
+			State := 0;
+		ELSE
+			State := 255;
+		END_IF
+
+		
+	// ********** End **********
+	ELSE	// Tests finished	
+		Finished := TRUE;
+		State := 255;
+			
+END_CASE
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_SDO_READ_LIST">
+      <LineId Id="68" Count="1" />
+      <LineId Id="500" Count="0" />
+      <LineId Id="70" Count="2" />
+      <LineId Id="76" Count="1" />
+      <LineId Id="216" Count="10" />
+      <LineId Id="501" Count="0" />
+      <LineId Id="228" Count="1" />
+      <LineId Id="233" Count="11" />
+      <LineId Id="331" Count="10" />
+      <LineId Id="470" Count="7" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

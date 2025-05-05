@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Refactors>
+  <Renames>
+    <RenamedType>
+      <Type guid="b64416a1-7c05-41f0-8f5b-b5cb123c7c3c">SDO_READ</Type>
+      <From>SDO_READ</From>
+      <To>FB_SDO_READ</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="e45eedb7-900b-45bb-86e6-5fdf367b1695">SDO_READ_REAL</Type>
+      <From>SDO_READ_REAL</From>
+      <To>FB_SDO_READ_REAL</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="67d36b31-693a-4cfe-a912-953ee324c4bf">SDO_READ_LIST</Type>
+      <From>SDO_READ_LIST</From>
+      <To>FB_SDO_READ_LIST</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="e3bc69ea-410e-4399-8d69-488380ab061b">SDO_WRITE</Type>
+      <From>SDO_WRITE</From>
+      <To>FB_SDO_WRITE</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="fbd2b633-1518-44e4-802e-bd58bfe27a3f">SDO_WRITE_REAL</Type>
+      <From>SDO_WRITE_REAL</From>
+      <To>FB_SDO_WRITE_REAL</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="9b992818-4ace-41a1-a0d2-08c08c5afb16">NMT_WRITE</Type>
+      <From>NMT_WRITE</From>
+      <To>FB_NMT_WRITE</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="8bcecccf-0172-4904-a369-b9a49f46e69c">CAN_OBJECT_TESTING_1</Type>
+      <From>CAN_Object_Testing_1</From>
+      <To>FB_DS301_DS402_Object_Testing</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="d843396f-fa8f-48d9-b410-34cc32cc4a1e">E_J_STOP_TESTING_STATES</Type>
+      <From>E_Stop_Testing_States</From>
+      <To>J_E_Stop_Testing_States</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="47b6846c-b861-460d-86c3-823631e06b07">STOP_TESTING</Type>
+      <From>Stop_Testing</From>
+      <To>J_Stop_Testing</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="c231d705-6bba-41a2-9ea5-2d7b22a70d02">J_STOP_TESTING</Type>
+      <From>J_Stop_Testing</From>
+      <To>J_Stop_Testing_SM</To>
+    </RenamedType>
+  </Renames>
+</Refactors>

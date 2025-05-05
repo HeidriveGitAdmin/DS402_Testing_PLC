@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="ST_Statemachine_State" Id="{811b93a9-6dcf-407c-9b66-68825456ebb9}">
+    <Declaration><![CDATA[TYPE ST_Statemachine_State :
+STRUCT
+	State			: E_Statemachine_State;
+    Name			: STRING(25);
+    Statusword		: E_Statemachine_Statusword;
+	Statusword_mask	: E_Statemachine_Statusword_Mask;
+	Statemachine_Transition_Controlword	: E_Statemachine_Transition_Controlword;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

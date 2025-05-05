@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+  <DUT Name="J_E_Test_Ranking" Id="{88dd65eb-87b1-4823-90ea-4c8f5763a1a4}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE J_E_Test_Ranking :
+(
+	OK := 0,
+	Not_OK := 1,
+	Issues := 2
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

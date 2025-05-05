@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+  <POU Name="J_Get_Speed" Id="{8f00167f-c762-46d8-98b4-2a539ab63bef}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK J_Get_Speed
+VAR_INPUT
+	NodeID			: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <LineIds Name="J_Get_Speed">
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
