@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+  <POU Name="Git_Test" Id="{9f67af42-6a8e-4204-8caf-9413ae67d438}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Git_Test
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Hallo Jan ausm GIT]]></ST>
+    </Implementation>
+    <LineIds Name="Git_Test">
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

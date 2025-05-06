@@ -125,6 +125,9 @@
     <Compile Include="POUs\FB_Message_Logging.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\Git_Test.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\Homing_Mode.TcPOU">
       <SubType>Code</SubType>
     </Compile>
