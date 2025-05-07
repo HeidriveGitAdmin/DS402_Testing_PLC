@@ -14,6 +14,7 @@ VAR_OUTPUT
 	Mode_of_operation 		: E_Mode_of_operation	:= E_Mode_of_operation.No_mode_active;
 END_VAR
 VAR
+	// Statemachine variables
 	JST_Profile_Velocity_Mode 		: Profile_Velocity_Mode;
 	e_Stop_Testing_State_Machine 	: (Idle,
 									   Start_Drive, 
@@ -50,12 +51,22 @@ VAR
 	SDO_WRITE		: FB_SDO_WRITE;
 	WriteData		: ARRAY [0..255] OF BYTE;
 	
-	Tolerance : INT := 30;		//Assumed that unit is RPM
-	
+	Vel_Tolerance  : INT := 30;		//Assumed that unit is RPM
+	Stop_Tolerance : INT := 5;
 	// Trash Variables 
 	Temp : BOOL := TRUE;
 	JumpNextState : BOOL := FALSE;
 	
+	//Timer variables
+	fbTON : TON := (PT := T#2000MS);
+	
+	
+	Elapsed_Time : TIME;
+END_VAR
+
+VAR CONSTANT
+	Start_Timer : BOOL := TRUE;
+	Reset_Timer : BOOL := FALSE;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -87,9 +98,12 @@ END_VAR
 				ELSE
 					WHILE Temp = TRUE DO
 						PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_position_mode;		//Maybe its enought to set it once?
-						PDO.Profile_velocity := JST_Profile_velocity_parameters.vl_target_velocity;
+						PDO.Profile_velocity 	:= JST_Profile_velocity_parameters.vl_target_velocity;
+						PDO.Target_position 	:= 16#1000000;    // need to evaluate a good value 
 						Temp := FALSE;
 					END_WHILE
+					//Profile position FB how to use?
+					PDO.Target_position 	:= 
 					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
 					e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
 				END_IF
@@ -117,10 +131,13 @@ END_VAR
 		CASE e_Operation_Mode OF
 			
 			e_Operation_Mode.Profile_position_mode:
-				IF ABS(PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity) < Tolerance THEN
-					e_Stop_Testing_State_Machine := Stop_Testing;
+				IF ABS(PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity) < Vel_Tolerance 
+				   AND PDO.Statusword = E_Statusword_Bits.Target_reached THEN
+						e_Stop_Testing_State_Machine := Stop_Testing;
+				ELSIF PDO.Statusword = E_Statusword_Bits.Fault THEN
+						e_Stop_Testing_State_Machine := Error_Handling;
 				ELSE
-					;
+						;
 				END_IF
 				// Wait for desired speed 
 				// true change state / false wirte msg log
@@ -146,6 +163,8 @@ END_VAR
 				CASE e_Stop_Mode OF
 					Switch_On:
 						//Trigger Stopp
+						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switched_on);						
+						fbTON(IN := Start_Timer);
 						e_Stop_Mode := Shutdown;
 						e_Stop_Type := Idle_Output_Stage;
 					Shutdown:
@@ -198,7 +217,15 @@ END_VAR
 		CASE e_Stop_Type OF
 			
 			Idle_Output_Stage:
-				// Check for 
+				// Check for Idle
+				IF ABS(PDO.Velocity_actual_value) < Stop_Tolerance AND fbTon.Q = FALSE THEN
+					fbTON(ET => Elapsed_Time, IN := Reset_Timer);
+					//Message...
+				ELSIF fbTON.Q = TRUE THEN
+					//Message ...
+					
+				END_IF
+				
 			Ramp_Down:
 				;
 			Vel_Zero:
@@ -235,8 +262,10 @@ END_CASE]]></ST>
       <LineId Id="276" Count="0" />
       <LineId Id="278" Count="1" />
       <LineId Id="291" Count="0" />
+      <LineId Id="301" Count="0" />
       <LineId Id="280" Count="0" />
       <LineId Id="277" Count="0" />
+      <LineId Id="299" Count="1" />
       <LineId Id="288" Count="0" />
       <LineId Id="290" Count="0" />
       <LineId Id="274" Count="0" />
@@ -263,7 +292,9 @@ END_CASE]]></ST>
       <LineId Id="43" Count="0" />
       <LineId Id="32" Count="0" />
       <LineId Id="134" Count="0" />
+      <LineId Id="302" Count="0" />
       <LineId Id="293" Count="0" />
+      <LineId Id="297" Count="1" />
       <LineId Id="295" Count="1" />
       <LineId Id="294" Count="0" />
       <LineId Id="33" Count="0" />
@@ -283,7 +314,10 @@ END_CASE]]></ST>
       <LineId Id="152" Count="3" />
       <LineId Id="9" Count="0" />
       <LineId Id="213" Count="0" />
-      <LineId Id="173" Count="36" />
+      <LineId Id="173" Count="2" />
+      <LineId Id="304" Count="0" />
+      <LineId Id="309" Count="0" />
+      <LineId Id="176" Count="33" />
       <LineId Id="217" Count="0" />
       <LineId Id="211" Count="1" />
       <LineId Id="220" Count="0" />
@@ -299,6 +333,11 @@ END_CASE]]></ST>
       <LineId Id="229" Count="0" />
       <LineId Id="114" Count="0" />
       <LineId Id="221" Count="0" />
+      <LineId Id="311" Count="1" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="316" Count="2" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="310" Count="0" />
       <LineId Id="223" Count="5" />
       <LineId Id="71" Count="0" />
       <LineId Id="8" Count="0" />
