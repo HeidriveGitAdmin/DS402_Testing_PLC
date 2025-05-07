@@ -5,8 +5,8 @@
 VAR_INPUT
 	Testing_Mode   : STRING(255);
 	Operation_Mode : E_Mode_of_operation;
-	Desired_Value  : INT;
-	Real_Value     : INT;
+	Desired_Value  : DINT;
+	Real_Value     : DINT;
 	Ranking 	   : J_E_Test_Ranking;
 	Comment		   : STRING(255);
 END_VAR
