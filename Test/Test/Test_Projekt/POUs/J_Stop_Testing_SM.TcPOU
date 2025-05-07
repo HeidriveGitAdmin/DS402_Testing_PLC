@@ -3,21 +3,24 @@
   <POU Name="J_Stop_Testing_SM" Id="{c231d705-6bba-41a2-9ea5-2d7b22a70d02}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK J_Stop_Testing_SM
 VAR_INPUT
-	NodeID			: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
-	Start_Testing	: BOOL; (* Send True to start the Stop Testing*)
-	Statusword		: WORD;	
-	
+	JST_NodeID					: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
+	JST_Start_Testing			: BOOL; (* Send True to start the Stop Testing*)
+	JST_Statusword				: WORD;	
+	JST_Current_State 			: E_Statemachine_State;
 END_VAR
 VAR_OUTPUT
-	Finished 		: BOOL;
+	Finished 				: BOOL;
+	JST_Controlword 		: WORD;
+	Mode_of_operation 		: E_Mode_of_operation	:= E_Mode_of_operation.No_mode_active;
 END_VAR
 VAR
-	e_Stop_Testing_State_Machine : (Idle,
-									Start_Drive, 
-									Check_Start_Drive_Condition,
-									Stop_Testing, 
-									Check_Stop_Drive_Condition,
-									Error_Handling) := Idle; 
+	JST_Profile_Velocity_Mode 		: Profile_Velocity_Mode;
+	e_Stop_Testing_State_Machine 	: (Idle,
+									   Start_Drive, 
+									   Check_Start_Drive_Condition,
+								       Stop_Testing, 
+									   Check_Stop_Drive_Condition,
+									   Error_Handling) := Idle; 
 									
 	e_Operation_Mode : E_Mode_of_operation := E_Mode_of_operation.Profile_position_mode;
 	
@@ -38,18 +41,28 @@ VAR
 					Quick_Stop);
 					
 	
-	Velocity_parameters	: ST_Velocity_parameters := (vl_target_velocity 	  := 1000,
-													 vl_velocity_acceleration := 1000,
-													 vl_velocity_deceleration := 1000);
+	JST_Profile_velocity_parameters	: ST_Velocity_parameters := (vl_target_velocity 	  := 1000,
+																 vl_velocity_acceleration := 1000,
+																 vl_velocity_deceleration := 1000);
 	vl_target_velocity	: INT := 0;
 	Target_State: E_STATEMACHINE_STATE;
+	
+	SDO_WRITE		: FB_SDO_WRITE;
+	WriteData		: ARRAY [0..255] OF BYTE;
+	
+	Tolerance : INT := 30;		//Assumed that unit is RPM
+	
+	// Trash Variables 
+	Temp : BOOL := TRUE;
+	JumpNextState : BOOL := FALSE;
+	
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[CASE e_Stop_Testing_State_Machine OF
 	
 	Idle:
-		IF Start_Testing THEN
+		IF JST_Start_Testing THEN
 			e_Stop_Testing_State_Machine := Start_Drive;
 		ELSE
 			e_Stop_Testing_State_Machine := Idle;
@@ -61,13 +74,26 @@ END_VAR
 		CASE e_Operation_Mode OF
 			
 			e_Operation_Mode.Profile_position_mode:
-				// Vel = 1000 ; Acc = 1000 ; Dec = 500, Pos = 10000000
-				PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_velocity_mode;
-				vl_target_velocity 		:= ST_Velocity_parameters.vl_target_velocity;
-				Target_State 			:= E_statemachine_state.Operation_enabled;
-				
-				e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
-				
+				// Vel = 1000 ; Acc = 1000 ; Dec = 1000, Pos = 10000000	
+				IF NOT JST_Profile_Velocity_Mode.Finished THEN
+					//just want to set acc and dec but not enable the drive
+					JST_Profile_Velocity_Mode (NodeID := JST_NodeID,		//PVM just because the param for acc and dec are set and the same as in PPM
+						   Start := TRUE,
+						   Current_State := JST_Current_State,
+						   Statusword := JST_Statusword,
+						   Profile_velocity_parameters := JST_Profile_velocity_parameters,
+						   Controlword => JST_Controlword);
+					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_Statemachine_State.Switch_on_disabled);
+				ELSE
+					WHILE Temp = TRUE DO
+						PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_position_mode;		//Maybe its enought to set it once?
+						PDO.Profile_velocity := JST_Profile_velocity_parameters.vl_target_velocity;
+						Temp := FALSE;
+					END_WHILE
+					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
+					e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+				END_IF
+								
 			e_Operation_Mode.Velocity_mode:
 				// Vel = 1000
 				// // Start Drive, Wait for SDO written then change state
@@ -91,7 +117,11 @@ END_VAR
 		CASE e_Operation_Mode OF
 			
 			e_Operation_Mode.Profile_position_mode:
-				// Check acc and dec
+				IF ABS(PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity) < Tolerance THEN
+					e_Stop_Testing_State_Machine := Stop_Testing;
+				ELSE
+					;
+				END_IF
 				// Wait for desired speed 
 				// true change state / false wirte msg log
 			e_Operation_Mode.Velocity_mode:
@@ -197,11 +227,20 @@ END_CASE]]></ST>
       <LineId Id="45" Count="0" />
       <LineId Id="18" Count="0" />
       <LineId Id="20" Count="0" />
-      <LineId Id="230" Count="0" />
-      <LineId Id="233" Count="0" />
-      <LineId Id="231" Count="1" />
-      <LineId Id="120" Count="0" />
-      <LineId Id="130" Count="0" />
+      <LineId Id="263" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="283" Count="4" />
+      <LineId Id="282" Count="0" />
+      <LineId Id="273" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="278" Count="1" />
+      <LineId Id="291" Count="0" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="288" Count="0" />
+      <LineId Id="290" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="254" Count="0" />
       <LineId Id="21" Count="0" />
       <LineId Id="23" Count="0" />
       <LineId Id="127" Count="0" />
@@ -224,6 +263,9 @@ END_CASE]]></ST>
       <LineId Id="43" Count="0" />
       <LineId Id="32" Count="0" />
       <LineId Id="134" Count="0" />
+      <LineId Id="293" Count="0" />
+      <LineId Id="295" Count="1" />
+      <LineId Id="294" Count="0" />
       <LineId Id="33" Count="0" />
       <LineId Id="137" Count="0" />
       <LineId Id="34" Count="1" />
