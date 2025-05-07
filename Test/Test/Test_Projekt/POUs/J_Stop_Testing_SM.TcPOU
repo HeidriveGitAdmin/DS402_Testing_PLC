@@ -17,17 +17,18 @@ VAR
 	// Statemachine variables
 	JST_Profile_Velocity_Mode 		: Profile_Velocity_Mode;
 	e_Stop_Testing_State_Machine 	: (Idle,
-									   Start_Drive, 
+									   Initialise_Drive,
 									   Check_Start_Drive_Condition,
 								       Stop_Testing, 
 									   Check_Stop_Drive_Condition,
+									   Start_Drive, 
 									   Error_Handling) := Idle; 
 									
 	e_Operation_Mode : E_Mode_of_operation := E_Mode_of_operation.Profile_position_mode;
 	
 	e_Stop_Mode :  (Switch_On,					//schnell runterrampen -> Switched on
 					Shutdown,					//Disable PS
-					Disable_Voltage,			//Disable PS
+					Switch_On_Disabled,			//Disable PS
 					Vel_To_Zero,				//Ramp down
 					Halt,						//stillstand mit dehmoment -> Weiterdrehen
 					Quick_Stop,					//schnell runterrampen -> Switch on Disabled
@@ -58,10 +59,12 @@ VAR
 	JumpNextState : BOOL := FALSE;
 	
 	//Timer variables
-	fbTON : TON := (PT := T#2000MS);
-	
-	
+	Toff : TIME := T#2000MS;
+	fbTON : TON := (PT := Toff);
 	Elapsed_Time : TIME;
+	
+	//Message logging variables
+	fb_Message_Logging : FB_Message_Logging;
 END_VAR
 
 VAR CONSTANT
@@ -80,7 +83,7 @@ END_VAR
 		END_IF
 		
 //---------------------Start Drive SM-----------------------------------
-	Start_Drive:
+	Initialise_Drive:
 	
 		CASE e_Operation_Mode OF
 			
@@ -161,48 +164,49 @@ END_VAR
 			e_Operation_Mode.Profile_position_mode:
 					
 				CASE e_Stop_Mode OF
+				//Trigger Stopp and start timer
 					Switch_On:
-						//Trigger Stopp
 						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switched_on);						
 						fbTON(IN := Start_Timer);
-						e_Stop_Mode := Shutdown;
+						
 						e_Stop_Type := Idle_Output_Stage;
 					Shutdown:
-						//Trigger Stopp
-						e_Stop_Mode := Disable_Voltage;
+						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Ready_to_switch_on);						
+						fbTON(IN := Start_Timer);
+						
 						e_Stop_Type := Idle_Output_Stage;
-					Disable_Voltage:
+					Switch_On_Disabled:
 						//Trigger Stopp
-						e_Stop_Mode := Vel_To_Zero;
+						
 						e_Stop_Type := Idle_Output_Stage;
 					Vel_To_Zero:
 						//Trigger Stopp
-						e_Stop_Mode := Halt;
+						
 						e_Stop_Type := Vel_Zero;
 					Halt:
 						//Trigger Stopp
-						e_Stop_Mode := Quick_Stop;
+						
 						e_Stop_Type := Vel_Zero;
 					Quick_Stop:
 						//Trigger Stopp
-						e_Stop_Mode := Fault;
+						
 						e_Stop_Type := Quick_Stop;
 					Fault:
 						//Trigger Stopp
-						e_Stop_Mode := STO1;
+						
 						e_Stop_Type := Idle_Output_Stage;
 					STO1:
 						//Trigger Stopp
-						e_Stop_Mode := STO2;
+						
 						e_Stop_Type := Idle_Output_Stage;
 					STO2:
 						//Trigger Stopp
-						e_Stop_Mode := Switch_On;
+						
 						e_Stop_Type := Idle_Output_Stage;
 						
 						e_Operation_Mode := e_Operation_Mode.Velocity_mode;
 				END_CASE
-				e_Stop_Testing_State_Machine := Check_Stop_Drive_Condition;
+				
 				
 			e_Operation_Mode.Velocity_mode:
 				;
@@ -211,6 +215,8 @@ END_VAR
 			e_Operation_Mode.Profile_torque_mode:
 				;
 		END_CASE
+		e_Stop_Testing_State_Machine := Check_Stop_Drive_Condition;
+		
 //---------------------Check Drive Stop------------------------------		
 	Check_Stop_Drive_Condition:
 		
@@ -220,10 +226,24 @@ END_VAR
 				// Check for Idle
 				IF ABS(PDO.Velocity_actual_value) < Stop_Tolerance AND fbTon.Q = FALSE THEN
 					fbTON(ET => Elapsed_Time, IN := Reset_Timer);
-					//Message...
-				ELSIF fbTON.Q = TRUE THEN
-					//Message ...
-					
+					fb_Message_Logging(Testing_Mode := 'Operation Enable -> Switch_On',
+									   Operation_Mode := e_Operation_Mode.Profile_position_mode,
+									   Desired_Value := TIME_TO_INT(Toff),
+									   Real_Value := TIME_TO_INT(Elapsed_Time),
+									   Ranking := J_E_Test_Ranking.OK,
+									   Comment := 'PowerStage enabled, Vel=0 in < 2s');
+				ELSIF fbTON.Q = TRUE AND ABS(PDO.Velocity_actual_value) > Stop_Tolerance  THEN
+					fb_Message_Logging(Testing_Mode := 'Operation Enable -> Switch_On',
+									   Operation_Mode := e_Operation_Mode.Profile_position_mode,
+									   Desired_Value := TIME_TO_INT(Toff),
+									   Real_Value := TIME_TO_INT(Elapsed_Time),
+									   Ranking := J_E_Test_Ranking.Issues,
+									   Comment := 'PowerStage enabled, Vel>0 after 2s');
+				// Maybe we need another else for more detailed logging
+				END_IF
+				//---------------------------------
+				IF fb_Message_Logging.Finished THEN
+					e_Stop_Testing_State_Machine := Start_Drive;
 				END_IF
 				
 			Ramp_Down:
@@ -233,6 +253,41 @@ END_VAR
 			Quick_Stop:
 				;
 		END_CASE
+//--------------------Start Drive Angain-----------------------------------------------------	
+	Start_Drive: 
+	
+		CASE e_Stop_Mode OF
+			
+			Switch_On:
+				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);	
+				e_Stop_Mode := Shutdown;					
+			Shutdown:
+				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switched_on);
+				e_Stop_Mode := Switch_On_Disabled;						
+			Switch_On_Disabled:
+				//Start again
+				e_Stop_Mode := Vel_To_Zero;
+			Vel_To_Zero:
+				//Start again;
+				e_Stop_Mode := Halt;
+			Halt:
+				//Start again
+				e_Stop_Mode := Quick_Stop;
+			Quick_Stop:
+				//Start again
+				e_Stop_Mode := Fault;
+			Fault:
+				//Start again
+				e_Stop_Mode := STO1;
+			STO1:
+				//Start again
+				e_Stop_Mode := STO2;
+			STO2:
+				//Start again
+				e_Stop_Mode := Switch_On;
+		END_CASE
+		e_Stop_Testing_State_Machine := Stop_Testing;
+//-------------------------Error Handling------------------------------------------
 	Error_Handling:
 		;
 END_CASE]]></ST>
@@ -314,10 +369,14 @@ END_CASE]]></ST>
       <LineId Id="152" Count="3" />
       <LineId Id="9" Count="0" />
       <LineId Id="213" Count="0" />
-      <LineId Id="173" Count="2" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="341" Count="0" />
+      <LineId Id="174" Count="0" />
       <LineId Id="304" Count="0" />
       <LineId Id="309" Count="0" />
-      <LineId Id="176" Count="33" />
+      <LineId Id="176" Count="2" />
+      <LineId Id="339" Count="1" />
+      <LineId Id="180" Count="29" />
       <LineId Id="217" Count="0" />
       <LineId Id="211" Count="1" />
       <LineId Id="220" Count="0" />
@@ -326,6 +385,7 @@ END_CASE]]></ST>
       <LineId Id="143" Count="0" />
       <LineId Id="141" Count="0" />
       <LineId Id="12" Count="0" />
+      <LineId Id="391" Count="1" />
       <LineId Id="115" Count="0" />
       <LineId Id="61" Count="0" />
       <LineId Id="116" Count="0" />
@@ -334,12 +394,51 @@ END_CASE]]></ST>
       <LineId Id="114" Count="0" />
       <LineId Id="221" Count="0" />
       <LineId Id="311" Count="1" />
-      <LineId Id="319" Count="0" />
-      <LineId Id="316" Count="2" />
+      <LineId Id="320" Count="0" />
+      <LineId Id="322" Count="1" />
+      <LineId Id="325" Count="1" />
+      <LineId Id="337" Count="0" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="332" Count="3" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="338" Count="0" />
+      <LineId Id="336" Count="0" />
       <LineId Id="313" Count="0" />
+      <LineId Id="328" Count="3" />
       <LineId Id="310" Count="0" />
       <LineId Id="223" Count="5" />
       <LineId Id="71" Count="0" />
+      <LineId Id="383" Count="0" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="388" Count="0" />
+      <LineId Id="384" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="345" Count="1" />
+      <LineId Id="393" Count="0" />
+      <LineId Id="350" Count="1" />
+      <LineId Id="394" Count="0" />
+      <LineId Id="355" Count="2" />
+      <LineId Id="359" Count="0" />
+      <LineId Id="362" Count="0" />
+      <LineId Id="395" Count="0" />
+      <LineId Id="363" Count="0" />
+      <LineId Id="366" Count="0" />
+      <LineId Id="396" Count="0" />
+      <LineId Id="367" Count="0" />
+      <LineId Id="370" Count="0" />
+      <LineId Id="397" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="374" Count="0" />
+      <LineId Id="398" Count="0" />
+      <LineId Id="375" Count="0" />
+      <LineId Id="378" Count="0" />
+      <LineId Id="399" Count="0" />
+      <LineId Id="379" Count="0" />
+      <LineId Id="343" Count="0" />
+      <LineId Id="400" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="387" Count="0" />
+      <LineId Id="386" Count="0" />
       <LineId Id="8" Count="0" />
       <LineId Id="13" Count="0" />
       <LineId Id="4" Count="0" />

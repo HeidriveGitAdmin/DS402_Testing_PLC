@@ -6,12 +6,12 @@ VAR_INPUT
 	Testing_Mode   : STRING(255);
 	Operation_Mode : E_Mode_of_operation;
 	Desired_Value  : INT;
-	Real_value     : INT;
+	Real_Value     : INT;
 	Ranking 	   : J_E_Test_Ranking;
-	//Start		   : BOOL;
-	Finished : BOOL;
+	Comment		   : STRING(255);
 END_VAR
 VAR_OUTPUT
+	Finished : BOOL;
 END_VAR
 VAR
 	dtTesting_Time : DATE_AND_TIME;
@@ -95,7 +95,7 @@ WHILE NOT Finished DO
 		Message := CONCAT(Message, TO_STRING(Operation_Mode));
 		Message := CONCAT(Message,',');
 		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, TO_STRING(Testing_Mode));
+		Message := CONCAT(Message, Testing_Mode);
 		Message := CONCAT(Message,',');
 		Message := CONCAT(Message,'$T');
 		Message := CONCAT(Message, INT_TO_STRING(Desired_Value));
@@ -105,6 +105,9 @@ WHILE NOT Finished DO
 		Message := CONCAT(Message,',');
 		Message := CONCAT(Message,'$T');
 		Message := CONCAT(Message, TO_STRING(Ranking));
+		Message := CONCAT(Message,',');
+		Message := CONCAT(Message,'$T');
+		Message := CONCAT(Message, Comment);
 		Message := CONCAT(Message,'$n');
 		
 		Running_Number := Running_Number + 1 ;
@@ -137,6 +140,7 @@ WHILE NOT Finished DO
 		ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_MSGBOX,
 				  msgFmtStr := ErrorMessage,
 				  strArg := '');
+		Finished := TRUE;
 	END_CASE
 	
 END_WHILE
@@ -144,7 +148,12 @@ END_WHILE
 ]]></ST>
     </Implementation>
     <LineIds Name="FB_Message_Logging">
-      <LineId Id="1" Count="94" />
+      <LineId Id="1" Count="57" />
+      <LineId Id="99" Count="1" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="59" Count="31" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="91" Count="4" />
     </LineIds>
   </POU>
 </TcPlcObject>
