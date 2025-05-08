@@ -53,94 +53,94 @@ Finished := FALSE;
 WHILE NOT Finished DO
 	
 	CASE eWriteFileStateMachine OF
-	Start_SM:
-		IF FileAlreadyOpen THEN
-			eWriteFileStateMachine := Create_Message;
-		ELSE
-			eWriteFileStateMachine := Trigger_Open_File;
-		END_IF
-	//-------------------------------------------------------------	
-	Trigger_Open_File:
-		fbFileOpen(bExecute := TRUE); 
-		eWriteFileStateMachine := Open_File;
-		
-	//-------------------------------------------------------------	
-	Open_File:		
-		fbFileOpen(bExecute := FALSE);	
-		IF fbFileOpen.bBusy THEN
+		Start_SM:
+			IF FileAlreadyOpen THEN
+				eWriteFileStateMachine := Create_Message;
+			ELSE
+				eWriteFileStateMachine := Trigger_Open_File;
+			END_IF
+		//-------------------------------------------------------------	
+		Trigger_Open_File:
+			fbFileOpen(bExecute := TRUE); 
 			eWriteFileStateMachine := Open_File;
-		ELSIF NOT fbFileOpen.bBusy AND fbFileOpen.hFile <>0 THEN
-			eWriteFileStateMachine := Create_Message;
-			FileAlreadyOpen := TRUE;
-		ELSIF fbFileOpen.bError THEN
-			eWriteFileStateMachine := Error_Handling;
-			ErrorMessage := 'Failed while open the file';
-			ErrorMessage := CONCAT(ErrorMessage , TO_STRING(fbFileOpen.nErrId));
-		ELSE
-			eWriteFileStateMachine := Error_Handling;
-			ErrorMessage := 'Something else wrong';
-		END_IF
-	//-------------------------------------------------------------		
-	Create_Message:
-		fbGETSYSTEMTIME( timeLoDW => stFileTime.dwLowDateTime,
-						 timeHiDW => stFileTime.dwHighDateTime);
-		dtTesting_Time := FILETIME_TO_DT(fileTime := stFileTime);
-		
-		Message := TO_STRING(Running_Number);
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, TO_STRING(dtTesting_Time)); 
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, TO_STRING(Operation_Mode));
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, Testing_Mode);
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, INT_TO_STRING(Desired_Value));
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, INT_TO_STRING(Real_Value));
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, TO_STRING(Ranking));
-		Message := CONCAT(Message,',');
-		Message := CONCAT(Message,'$T');
-		Message := CONCAT(Message, Comment);
-		Message := CONCAT(Message,'$n');
-		
-		Running_Number := Running_Number + 1 ;
-		eWriteFileStateMachine := Trigger_Write_Message;
-	//-------------------------------------------------------------	
-	Trigger_Write_Message:
-		fbFilePuts( bExecute := TRUE,
-					sline:= Message,
-					hFile := fbFileOpen.hFile); 
-		eWriteFileStateMachine := Write_Message;
-
-	//-------------------------------------------------------------	
-	Write_Message:
-		fbFilePuts(bExecute := FALSE);
-		IF fbFilePuts.bBusy THEN
+			
+		//-------------------------------------------------------------	
+		Open_File:		
+			fbFileOpen(bExecute := FALSE);	
+			IF fbFileOpen.bBusy THEN
+				eWriteFileStateMachine := Open_File;
+			ELSIF NOT fbFileOpen.bBusy AND fbFileOpen.hFile <>0 THEN
+				eWriteFileStateMachine := Create_Message;
+				FileAlreadyOpen := TRUE;
+			ELSIF fbFileOpen.bError THEN
+				eWriteFileStateMachine := Error_Handling;
+				ErrorMessage := 'Failed while open the file';
+				ErrorMessage := CONCAT(ErrorMessage , TO_STRING(fbFileOpen.nErrId));
+			ELSE
+				eWriteFileStateMachine := Error_Handling;
+				ErrorMessage := 'Something else wrong';
+			END_IF
+		//-------------------------------------------------------------		
+		Create_Message:
+			fbGETSYSTEMTIME( timeLoDW => stFileTime.dwLowDateTime,
+							 timeHiDW => stFileTime.dwHighDateTime);
+			dtTesting_Time := FILETIME_TO_DT(fileTime := stFileTime);
+			
+			Message := TO_STRING(Running_Number);
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, TO_STRING(dtTesting_Time)); 
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, TO_STRING(Operation_Mode));
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, Testing_Mode);
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, INT_TO_STRING(Desired_Value));
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, INT_TO_STRING(Real_Value));
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, TO_STRING(Ranking));
+			Message := CONCAT(Message,',');
+			Message := CONCAT(Message,'$T');
+			Message := CONCAT(Message, Comment);
+			Message := CONCAT(Message,'$n');
+			
+			Running_Number := Running_Number + 1 ;
+			eWriteFileStateMachine := Trigger_Write_Message;
+		//-------------------------------------------------------------	
+		Trigger_Write_Message:
+			fbFilePuts( bExecute := TRUE,
+						sline:= Message,
+						hFile := fbFileOpen.hFile); 
 			eWriteFileStateMachine := Write_Message;
-		ELSIF NOT fbFilePuts.bBusy THEN
-			eWriteFileStateMachine := Start_SM;
+	
+		//-------------------------------------------------------------	
+		Write_Message:
+			fbFilePuts(bExecute := FALSE);
+			IF fbFilePuts.bBusy THEN
+				eWriteFileStateMachine := Write_Message;
+			ELSIF NOT fbFilePuts.bBusy THEN
+				eWriteFileStateMachine := Start_SM;
+				Finished := TRUE;
+			ELSIF fbFilePuts.bError THEN
+				eWriteFileStateMachine := Error_Handling;
+				ErrorMessage := 'Failed while write the file: ';
+				ErrorMessage := CONCAT(ErrorMessage , TO_STRING(fbFilePuts.nErrId));
+			ELSE
+				eWriteFileStateMachine := Error_Handling;
+				ErrorMessage := 'Something else wrong';
+			END_IF
+		//---------------------------------------------------------------	
+		Error_Handling:
+			ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_MSGBOX,
+					  msgFmtStr := ErrorMessage,
+					  strArg := '');
 			Finished := TRUE;
-		ELSIF fbFilePuts.bError THEN
-			eWriteFileStateMachine := Error_Handling;
-			ErrorMessage := 'Failed while write the file: ';
-			ErrorMessage := CONCAT(ErrorMessage , TO_STRING(fbFilePuts.nErrId));
-		ELSE
-			eWriteFileStateMachine := Error_Handling;
-			ErrorMessage := 'Something else wrong';
-		END_IF
-	//---------------------------------------------------------------	
-	Error_Handling:
-		ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_MSGBOX,
-				  msgFmtStr := ErrorMessage,
-				  strArg := '');
-		Finished := TRUE;
 	END_CASE
 	
 END_WHILE
