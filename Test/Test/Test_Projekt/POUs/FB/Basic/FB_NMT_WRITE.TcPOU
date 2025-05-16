@@ -33,7 +33,7 @@ state OF
 			LEN			:= 2,
 			SRCADDR		:= ADR(NMTData),
 			WRITE		:= TRUE,
-			TMOUT 		:= T#1S
+			TMOUT 		:= T#100MS
 		);	
 		IF ADSWRTCTL.err THEN
 			state := 2;

@@ -3,31 +3,31 @@
   <GVL Name="Manufacturer_Label_Objects" Id="{deb8f72f-68fc-45d5-9105-e4d8c6b0d535}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL
-	Serial_Number			: ST_CAN_Object := (Name:='Serial Number', 			Index:=16#41C0, Subindex:=16#01, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Model_Info				: ST_CAN_Object := (Name:='Model Info', 			Index:=16#41C0, Subindex:=16#02, Length:=255, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=0);
-	Min_v					: ST_CAN_Object := (Name:='Min v', 					Index:=16#41C0, Subindex:=16#03, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Max_v					: ST_CAN_Object := (Name:='Max v', 					Index:=16#41C0, Subindex:=16#04, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_rated_current		: ST_CAN_Object := (Name:='Motor rated current', 	Index:=16#41C0, Subindex:=16#05, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Drive_rated_current		: ST_CAN_Object := (Name:='Drive rated current', 	Index:=16#41C0, Subindex:=16#06, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Max_current				: ST_CAN_Object := (Name:='Max current', 			Index:=16#41C0, Subindex:=16#07, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_rated_torque		: ST_CAN_Object := (Name:='Motor rated torque', 	Index:=16#41C0, Subindex:=16#08, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Max_torque				: ST_CAN_Object := (Name:='Max torque', 			Index:=16#41C0, Subindex:=16#09, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_rated_speed		: ST_CAN_Object := (Name:='Motor rated speed', 		Index:=16#41C0, Subindex:=16#0A, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Number_of_pole_pairs	: ST_CAN_Object := (Name:='Number of pole pairs', 	Index:=16#41C0, Subindex:=16#0B, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_torque_constant	: ST_CAN_Object := (Name:='Motor torque constant', 	Index:=16#41C0, Subindex:=16#0C, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Flux_producing_P_gain	: ST_CAN_Object := (Name:='Flux producing P gain', 	Index:=16#41C0, Subindex:=16#0D, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Flux_producing_I_gain	: ST_CAN_Object := (Name:='Flux producing I gain', 	Index:=16#41C0, Subindex:=16#0E, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Torque_producing_P_ain	: ST_CAN_Object := (Name:='Torque producing P ain', Index:=16#41C0, Subindex:=16#0F, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Torque_producing_I_gain	: ST_CAN_Object := (Name:='Torque producing I gain',Index:=16#41C0, Subindex:=16#10, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Magnetic_encoder_offset	: ST_CAN_Object := (Name:='Magnetic encoder offset',Index:=16#41C0, Subindex:=16#11, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_with_brake		: ST_CAN_Object := (Name:='Motor with brake', 		Index:=16#41C0, Subindex:=16#12, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Encoder_mode_adjust		: ST_CAN_Object := (Name:='Encoder mode adjust', 	Index:=16#41C0, Subindex:=16#13, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_max_speed			: ST_CAN_Object := (Name:='Motor max speed', 		Index:=16#41C0, Subindex:=16#14, Length:=2, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Rotor_inertia			: ST_CAN_Object := (Name:='Rotor inertia', 			Index:=16#41C0, Subindex:=16#15, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Motor_Time_At_Peak		: ST_CAN_Object := (Name:='Motor Time At Peak', 	Index:=16#41C0, Subindex:=16#17, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Drive_Time_At_Peak		: ST_CAN_Object := (Name:='Drive Time At Peak', 	Index:=16#41C0, Subindex:=16#18, Length:=4, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Single_Turn_Resolution	: ST_CAN_Object := (Name:='Single-Turn Resolution', Index:=16#41C0, Subindex:=16#19, Length:=1, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
-	Multi_Turn_Resolution	: ST_CAN_Object := (Name:='Multi Turn Resolution', 	Index:=16#41C0, Subindex:=16#1A, Length:=1, Readable:=TRUE, Writeable:=TRUE, TPDO_Mappable:=FALSE, RPDO_Mappable:=FALSE, Default_Value:=16#00000000);
+	Serial_Number			: ST_CAN_Object := (Name:='Serial Number', 			Index:=16#41C0, Subindex:=16#01);
+	Model_Info				: ST_CAN_Object := (Name:='Model Info', 			Index:=16#41C0, Subindex:=16#02, Length:=255);
+	Min_v					: ST_CAN_Object := (Name:='Min v', 					Index:=16#41C0, Subindex:=16#03);
+	Max_v					: ST_CAN_Object := (Name:='Max v', 					Index:=16#41C0, Subindex:=16#04);
+	Motor_rated_current		: ST_CAN_Object := (Name:='Motor rated current', 	Index:=16#41C0, Subindex:=16#05);
+	Drive_rated_current		: ST_CAN_Object := (Name:='Drive rated current', 	Index:=16#41C0, Subindex:=16#06);
+	Max_current				: ST_CAN_Object := (Name:='Max current', 			Index:=16#41C0, Subindex:=16#07, Length:=2);
+	Motor_rated_torque		: ST_CAN_Object := (Name:='Motor rated torque', 	Index:=16#41C0, Subindex:=16#08);
+	Max_torque				: ST_CAN_Object := (Name:='Max torque', 			Index:=16#41C0, Subindex:=16#09, Length:=2);
+	Motor_rated_speed		: ST_CAN_Object := (Name:='Motor rated speed', 		Index:=16#41C0, Subindex:=16#0A);
+	Number_of_pole_pairs	: ST_CAN_Object := (Name:='Number of pole pairs', 	Index:=16#41C0, Subindex:=16#0B, Length:=2);
+	Motor_torque_constant	: ST_CAN_Object := (Name:='Motor torque constant', 	Index:=16#41C0, Subindex:=16#0C);
+	Flux_producing_P_gain	: ST_CAN_Object := (Name:='Flux producing P gain', 	Index:=16#41C0, Subindex:=16#0D);
+	Flux_producing_I_gain	: ST_CAN_Object := (Name:='Flux producing I gain', 	Index:=16#41C0, Subindex:=16#0E);
+	Torque_producing_P_ain	: ST_CAN_Object := (Name:='Torque producing P ain', Index:=16#41C0, Subindex:=16#0F);
+	Torque_producing_I_gain	: ST_CAN_Object := (Name:='Torque producing I gain',Index:=16#41C0, Subindex:=16#10);
+	Magnetic_encoder_offset	: ST_CAN_Object := (Name:='Magnetic encoder offset',Index:=16#41C0, Subindex:=16#11, Length:=2);
+	Motor_with_brake		: ST_CAN_Object := (Name:='Motor with brake', 		Index:=16#41C0, Subindex:=16#12, Length:=2);
+	Encoder_mode_adjust		: ST_CAN_Object := (Name:='Encoder mode adjust', 	Index:=16#41C0, Subindex:=16#13, Length:=2);
+	Motor_max_speed			: ST_CAN_Object := (Name:='Motor max speed', 		Index:=16#41C0, Subindex:=16#14, Length:=2);
+	Rotor_inertia			: ST_CAN_Object := (Name:='Rotor inertia', 			Index:=16#41C0, Subindex:=16#15);
+	Motor_Time_At_Peak		: ST_CAN_Object := (Name:='Motor Time At Peak', 	Index:=16#41C0, Subindex:=16#17);
+	Drive_Time_At_Peak		: ST_CAN_Object := (Name:='Drive Time At Peak', 	Index:=16#41C0, Subindex:=16#18);
+	Single_Turn_Resolution	: ST_CAN_Object := (Name:='Single-Turn Resolution', Index:=16#41C0, Subindex:=16#19, Length:=1);
+	Multi_Turn_Resolution	: ST_CAN_Object := (Name:='Multi Turn Resolution', 	Index:=16#41C0, Subindex:=16#1A, Length:=1);
 
 	Manufacturer_Label_Objects_List : ARRAY [0..24] OF ST_CAN_Object := [Serial_Number, Model_Info, Min_v, Max_v, Motor_rated_current, Drive_rated_current, Max_current, Motor_rated_torque, Max_torque, Motor_rated_speed, Number_of_pole_pairs, Motor_torque_constant, Flux_producing_P_gain, Flux_producing_I_gain, Torque_producing_P_ain, Torque_producing_I_gain, Magnetic_encoder_offset, Motor_with_brake, Encoder_mode_adjust, Motor_max_speed, Rotor_inertia, Motor_Time_At_Peak, Drive_Time_At_Peak, Single_Turn_Resolution, Multi_Turn_Resolution];
 END_VAR]]></Declaration>

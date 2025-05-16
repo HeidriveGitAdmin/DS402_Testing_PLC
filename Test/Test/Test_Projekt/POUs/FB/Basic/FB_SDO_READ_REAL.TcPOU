@@ -33,7 +33,7 @@ state OF
 			LEN			:= 4,
 			DESTADDR	:= ADR(ReadData),
 			READ		:= TRUE,
-			TMOUT		:= T#1S
+			TMOUT		:= T#100MS
 		);
 
 		IF ADSRead.err THEN
@@ -52,7 +52,7 @@ state OF
 			LEN			:= 4,
 			DESTADDR	:= ADR(ReadData),
 			READ		:= FALSE,
-			TMOUT 		:= T#1S
+			TMOUT 		:= T#100MS
 		);
 	END_IF
 	

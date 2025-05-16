@@ -1,0 +1,314 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="FB_Logger" Id="{341e73fd-5d65-4fdd-84cf-702779b5f767}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Logger
+VAR_INPUT
+	NetId			: STRING		:= '10.200.20.219.1.1';	
+	FileName		: STRING 		:= 'C:/Users/heigl/Desktop/LogFile.log';
+	Timeout			: TIME			:= T#100MS;			// Timeout
+
+	Message			: STRING(256)	:= '';				// Write this message with index, timestamp and a new line suffix
+	OpenFlag		: BOOL			:= FALSE;			// Open the file
+	CloseFlag		: BOOL			:= FALSE;			// Close the file
+	SaveFlag		: BOOL			:= FALSE;			// Save the file
+END_VAR
+VAR_OUTPUT		
+	State			: e_LoggerState	:= e_LoggerState.Closed;
+	IsOpen			: BOOL			:= FALSE;	
+END_VAR
+VAR
+	Open			: FB_FileOpen;
+	Write			: FB_FilePuts;
+	Close   		: FB_FileClose;
+
+	Index			: DWORD			:= 1;
+	MessageBuffer	: STRING 		:= '';
+	
+    GetSystemTime 	: GETSYSTEMTIME;
+    StartFileTime   : T_FILETIME;
+	FileTime   		: T_FILETIME;	
+    SystemTime		: TIMESTRUCT;
+    Filedate 		: STRING(15)	:= '';
+	Startdate		: STRING(20);
+    Timestamp 		: STRING(30);
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Add the new message to write
+IF (Message <> '') THEN
+	IF Filedate = '' THEN
+		Timestamp := '0';		
+	ELSE
+		// Timestamp with format: YHH:MM:SS.mmm		
+		GetSystemTime(timeLoDW => FileTime.dwLowDateTime, timeHiDW => FileTime.dwHighDateTime);
+		Timestamp := LINT_TO_STRING((SHL(DWORD_TO_LINT(FileTime.dwHighDateTime), 32) + DWORD_TO_LINT(FileTime.dwLowDateTime) - SHL(DWORD_TO_LINT(StartFileTime.dwHighDateTime), 32) - DWORD_TO_LINT(StartFileTime.dwLowDateTime))/10000);	
+	END_IF	
+	MessageBuffer := CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(MessageBuffer, DWORD_TO_STRING(Index)), ';'), Timestamp), ';'), Message), '$0A');	
+	Index := Index + 1;
+	Message := '';
+END_IF
+
+
+
+CASE State OF
+	// ***** Open the logger file *****
+	e_LoggerState.Open:
+		IF IsOpen THEN
+			// The logger file is already opened			
+			State := e_LoggerState.Opened;
+		ELSIF OpenFlag OR SaveFlag THEN
+			// Start opening
+			IF OpenFlag THEN
+				// Timestamp with format: YYYYMMDD_HHMMSS			
+				GetSystemTime(timeLoDW => StartFileTime.dwLowDateTime, timeHiDW => StartFileTime.dwHighDateTime);
+				SystemTime := FILETIME_TO_SYSTEMTIME(StartFileTime);
+				Filedate := CONCAT(	CONCAT(	CONCAT(	CONCAT(	CONCAT(	CONCAT(	WORD_TO_STRING(SystemTime.wYear),
+																			RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wMonth)),2)),
+																	RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wDay)),2)),
+															'_'),
+													RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wHour)),2)),
+											RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wMinute)),2)),
+									RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wSecond)),2));									
+
+				// Write header	
+				Startdate := CONCAT(CONCAT(	CONCAT(	CONCAT(	CONCAT(	CONCAT(	CONCAT(	RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wDay)),2),
+																					'.'),
+																			CONCAT(	RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wMonth)),2),
+																					'.')),
+																	WORD_TO_STRING(SystemTime.wYear)),
+															' '),
+													CONCAT(RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wHour)),2),':')),
+											CONCAT(RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wMinute)),2),':')),
+									RIGHT(CONCAT('0',WORD_TO_STRING(SystemTime.wSecond)),2));
+				
+				MessageBuffer := CONCAT(CONCAT(	CONCAT(	 'Startdate;', Startdate ), 
+												'$0A$0ANo.;Timestamp [ms];Info$0A'),
+										MessageBuffer);										
+			END_IF
+			
+			Open(sNetId := NetID, 
+				 sPathName := INSERT(FileName, CONCAT('_', Filedate), FIND(FileName,'.')-1), 
+				 nMode := FOPEN_MODEAPPEND OR FOPEN_MODETEXT, bExecute:=TRUE, tTimeout:=Timeout);
+			State := e_LoggerState.Opening;
+		END_IF
+		
+		
+	// ***** The logger file is currently opening. *****
+	e_LoggerState.Opening:
+		IF IsOpen THEN
+			// The logger file is already opened
+			State := e_LoggerState.Opened;			
+		ELSE
+			Open(bExecute:=FALSE);
+			IF NOT Open.bBusy THEN
+				IF Open.hFile <> 0 THEN
+					// Opening is finished
+					Write(sNetId:=Open.sNetId, hFile:=Open.hFile, bExecute:=FALSE);
+					Close(sNetId:=Open.sNetId, hFile:=Open.hFile, bExecute:=FALSE);					
+					IsOpen := TRUE;	
+					IF OpenFlag THEN 
+						OpenFlag := FALSE;
+					ELSE
+						SaveFlag := FALSE; 
+					END_IF			
+					State := e_LoggerState.Opened;	
+				ELSE
+					// Open function is not busy but no file is opened
+					State := e_LoggerState.Closed;					
+				END_IF		
+			ELSIF Open.bError THEN
+				// Error
+				State := e_LoggerState.Opening_Error;
+			END_IF		
+		END_IF
+		
+		
+	// ***** A error at opening logger file has occured *****		
+	e_LoggerState.Opening_Error:	
+		ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_MSGBOX,
+				  msgFmtStr := 'Error during opening the logger file: %s',
+				  strArg := TO_STRING(Open.nErrId));
+		State := e_LoggerState.Closed;
+	
+				  
+	// ***** The logger file is opened and write data as required. *****
+	e_LoggerState.Opened:
+		IF Close.bBusy THEN
+			// Closing is already startet (external triggered)
+			State := e_LoggerState.Closing;					
+		ELSIF Write.bBusy THEN
+			// Writing is runing (external triggered)
+			State := e_LoggerState.Writing;				
+		ELSE					
+			// String to write is exists -> Start writing
+			IF MessageBuffer <> '' THEN	
+				Close(bExecute:=FALSE);	
+				Write(sLine:=MessageBuffer, bExecute:=TRUE, tTimeout:=Timeout);		
+				MessageBuffer := '';		
+				State := e_LoggerState.Writing;				
+			ELSE		
+				IF CloseFlag OR SaveFlag THEN
+					// Close command
+					State := e_LoggerState.Close;	
+				END_IF
+			END_IF;
+		END_IF
+	
+		
+	// ***** Writing to the logger file *****	
+	e_LoggerState.Writing:
+		Write(bExecute:=FALSE);		
+		IF NOT Write.bBusy THEN
+			// Writing is completed
+			Write(bExecute:=FALSE);	
+			State := e_LoggerState.Opened;
+		ELSIF Write.bError THEN
+			// An error has occured
+			State := e_LoggerState.Writing_Error;
+		END_IF
+		
+				
+	// ***** A error at writing to logger file has occured *****		
+	e_LoggerState.Writing_Error:	
+		ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_MSGBOX,
+				  msgFmtStr := 'Error during writing to the logger file: %s',
+				  strArg := TO_STRING(Write.nErrId));
+		State := e_LoggerState.Opened;	
+			  
+		
+	// ***** Close the logger file *****	
+	e_LoggerState.Close:
+		IF IsOpen THEN	
+			// Start closing
+			Close(bExecute:=TRUE, tTimeout:=Timeout);
+			State := e_LoggerState.Closing;
+		ELSE
+			// The logger file is already closed			
+			State := e_LoggerState.Closed;
+		END_IF
+				
+		
+	// ***** The logger file is currently closing *****
+	e_LoggerState.Closing:	
+		IF IsOpen THEN
+			Close(bExecute:=FALSE);
+			IF NOT Close.bBusy THEN
+				// Closing is finished
+				IF CloseFlag THEN			
+					// If the command is save and close then the close command is enough.
+					IF SaveFlag THEN SaveFlag := FALSE; END_IF
+					Index := 1;
+					Filedate := '';
+					CloseFlag := FALSE;
+				END_IF;
+				State := e_LoggerState.Closed;
+			ELSIF Close.bError THEN
+				// Error
+				State := e_LoggerState.Closing_Error;
+			END_IF
+		ELSE
+			// The logger file is already closed
+			State := e_LoggerState.Closed;
+		END_IF		
+	
+		
+	// ***** A error at closing logger file has occured *****		
+	e_LoggerState.Closing_Error:	
+		ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_MSGBOX,
+				  msgFmtStr := 'Error during closing the logger file: %s',
+				  strArg := TO_STRING(Close.nErrId));
+		State := e_LoggerState.Opened;			
+				  
+		
+	// ***** The logger file is closed *****
+	e_LoggerState.Closed:	
+		IsOpen := FALSE;	
+		
+		// Check, if the open function is triggered
+		IF OpenFlag OR SaveFlag OR Open.bBusy THEN
+			State := e_LoggerState.Open;	
+		ELSE
+			CloseFlag := FALSE;
+		END_IF
+	
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Logger">
+      <LineId Id="431" Count="0" />
+      <LineId Id="436" Count="0" />
+      <LineId Id="785" Count="0" />
+      <LineId Id="822" Count="1" />
+      <LineId Id="698" Count="1" />
+      <LineId Id="794" Count="0" />
+      <LineId Id="787" Count="0" />
+      <LineId Id="437" Count="0" />
+      <LineId Id="702" Count="0" />
+      <LineId Id="439" Count="12" />
+      <LineId Id="736" Count="0" />
+      <LineId Id="679" Count="0" />
+      <LineId Id="663" Count="1" />
+      <LineId Id="667" Count="0" />
+      <LineId Id="769" Count="0" />
+      <LineId Id="765" Count="3" />
+      <LineId Id="764" Count="0" />
+      <LineId Id="859" Count="0" />
+      <LineId Id="858" Count="0" />
+      <LineId Id="843" Count="0" />
+      <LineId Id="849" Count="0" />
+      <LineId Id="844" Count="0" />
+      <LineId Id="850" Count="0" />
+      <LineId Id="845" Count="3" />
+      <LineId Id="842" Count="0" />
+      <LineId Id="852" Count="1" />
+      <LineId Id="860" Count="0" />
+      <LineId Id="851" Count="0" />
+      <LineId Id="634" Count="0" />
+      <LineId Id="737" Count="0" />
+      <LineId Id="452" Count="0" />
+      <LineId Id="612" Count="1" />
+      <LineId Id="453" Count="16" />
+      <LineId Id="752" Count="0" />
+      <LineId Id="755" Count="0" />
+      <LineId Id="754" Count="0" />
+      <LineId Id="753" Count="0" />
+      <LineId Id="756" Count="0" />
+      <LineId Id="470" Count="21" />
+      <LineId Id="597" Count="0" />
+      <LineId Id="600" Count="0" />
+      <LineId Id="598" Count="0" />
+      <LineId Id="591" Count="0" />
+      <LineId Id="601" Count="0" />
+      <LineId Id="592" Count="0" />
+      <LineId Id="595" Count="0" />
+      <LineId Id="747" Count="0" />
+      <LineId Id="500" Count="0" />
+      <LineId Id="900" Count="0" />
+      <LineId Id="615" Count="0" />
+      <LineId Id="901" Count="0" />
+      <LineId Id="866" Count="0" />
+      <LineId Id="740" Count="0" />
+      <LineId Id="749" Count="1" />
+      <LineId Id="739" Count="0" />
+      <LineId Id="751" Count="0" />
+      <LineId Id="503" Count="0" />
+      <LineId Id="506" Count="0" />
+      <LineId Id="596" Count="0" />
+      <LineId Id="507" Count="4" />
+      <LineId Id="603" Count="0" />
+      <LineId Id="606" Count="0" />
+      <LineId Id="513" Count="1" />
+      <LineId Id="604" Count="0" />
+      <LineId Id="515" Count="29" />
+      <LineId Id="770" Count="0" />
+      <LineId Id="791" Count="0" />
+      <LineId Id="789" Count="0" />
+      <LineId Id="826" Count="0" />
+      <LineId Id="793" Count="0" />
+      <LineId Id="781" Count="0" />
+      <LineId Id="792" Count="0" />
+      <LineId Id="545" Count="25" />
+      <LineId Id="783" Count="1" />
+      <LineId Id="571" Count="1" />
+      <LineId Id="577" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

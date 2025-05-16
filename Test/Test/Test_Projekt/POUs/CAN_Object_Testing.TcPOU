@@ -10,19 +10,18 @@ VAR_OUTPUT
 	Finished		: BOOL;
 END_VAR
 VAR_IN_OUT
-	CAN_Objects		: ARRAY [*] OF ST_CAN_Object_Test;
+	CAN_Objects		: ARRAY [*] OF ST_CAN_Object;
 END_VAR
 VAR
 	State			: BYTE := 0;
 	Index			: DINT := 0;
+	i				: BYTE := 0;
+	
+	Data		: ARRAY [0..255] OF BYTE;
 	
 	NMT_WRITE		: FB_NMT_WRITE;
-	
 	SDO_READ		: FB_SDO_READ;
-	ReadData		: ARRAY [0..255] OF BYTE;
-	
-	SDO_WRITE		: FB_SDO_WRITE;
-	WriteData		: ARRAY [0..255] OF BYTE;		
+	SDO_WRITE		: FB_SDO_WRITE;	
 			
 	RPDO_Nr				: BYTE := 3;	
 	RPDO_Current_Number	: BYTE := 0;
@@ -45,114 +44,130 @@ NMT_WRITE(StartWriting:=FALSE);
 CASE State OF	
 	// ********** Initial steps **********	
 	0: // NMT Set to Preoperational
-		NMT_WRITE(
-			AdsNetID	:= '5.156.6.243.3.1',
-			PortNr		:= 16#1000 + NodeID,
-			ADSSTATE	:= ADSSTATE_RUN, 
-			DEVSTATE	:= 0,
-			StartWriting:=TRUE			
-		);	
-		
-		IF NMT_WRITE.WriteDataFinished THEN
-			Index := 0;	
-			State := State + 1;	
+		IF Start THEN
+			NMT_WRITE(
+				AdsNetID	:= GLB.ADSNetID_CAN,
+				PortNr		:= 16#1000 + GLB.NodeID,
+				ADSSTATE	:= ADSSTATE_RUN, 
+				DEVSTATE	:= 0,
+				StartWriting:=TRUE			
+			);	
+			State := State + 1;			
 		END_IF
 		
+	1: // Wait for finish			
+			IF NMT_WRITE.WriteDataFinished THEN
+				Index := 0;	
+				State := State + 1;	
+			END_IF
 
-	1:	// RPDO disable
-		WriteData[3] := 16#80;
-		WriteData[2] := 0;			
-		WriteData[1] := RPDO_Nr + 1;
-		WriteData[0] := NodeID;	
+			
+	2:	// RPDO disable
+		Data[3] := 16#80;
+		Data[2] := 0;			
+		Data[1] := RPDO_Nr + 1;
+		Data[0] := NodeID;	
 			
 		SDO_WRITE(
-			ADSNetID		:= '5.156.6.243.3.1',
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 	 	:= 16#1400 + RPDO_Nr,
 			CO_SubIndex  	:= 1,
 			DataLength 	 	:= 4,
 			StartWriting 	:= TRUE,
-			WriteData 	 	:= WriteData );
+			WriteData 	 	:= Data );
+		State := State + 1;	
 		
+	3: // Wait for finish
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF	
 		
 		
-	2:	// RPDO Current Number of mapped objects
+	4:	// RPDO Current Number of mapped objects
 		SDO_READ(
-			ADSNetID		:= '5.156.6.243.3.1',				
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1600 + RPDO_Nr,
 			CO_SubIndex 	:= 0,
 			DataLength 		:= 1,
 			StartReading	:= TRUE	);
+		State := State + 1;	
 		
+	5: // Wait for finish
 		IF SDO_READ.ReadDataAvailable THEN
 			RPDO_Current_Number := SDO_READ.ReadData[0];
 			State := State + 1;
 		END_IF
 		
 	
-	3:	// RPDO Current mapped object
+	6:	// RPDO Current mapped object
 		SDO_READ(
-			ADSNetID		:= '5.156.6.243.3.1',				
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1600 + RPDO_Nr,
 			CO_SubIndex 	:= 1,
 			DataLength 		:= 4,
-			StartReading	:= TRUE	);
+			StartReading	:= TRUE);
+		State := State + 1;	
 		
+	7: // Wait for finish
 		IF SDO_READ.ReadDataAvailable THEN
 			RPDO_Current_Mapped := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);								
 			State := State + 1;
 		END_IF		
 			
 		
-	4:	// TPDO disable
-		WriteData[3] := 16#80;
-		WriteData[2] := 0;			
-		WriteData[1] := TPDO_Nr;
-		WriteData[0] := NodeID + 16#80;	
+	8:	// TPDO disable
+		Data[3] := 16#80;
+		Data[2] := 0;			
+		Data[1] := TPDO_Nr;
+		Data[0] := NodeID + 16#80;	
 			
 		SDO_WRITE(
-			ADSNetID		:= '5.156.6.243.3.1',
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 	 	:= 16#1800 + TPDO_Nr,
 			CO_SubIndex  	:= 1,
 			DataLength 	 	:= 4,
 			StartWriting 	:= TRUE,
-			WriteData 	 	:= WriteData );
+			WriteData 	 	:= Data );		
+		State := State + 1;	
 		
+	9: // Wait for finish
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF	
 		
 
-	5:	// TPDO Current Number of mapped objects
+	10:	// TPDO Current Number of mapped objects
 		SDO_READ(
-			ADSNetID		:= '5.156.6.243.3.1',				
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1A00 + TPDO_Nr,
 			CO_SubIndex 	:= 0,
 			DataLength 		:= 1,
-			StartReading	:= TRUE	);
+			StartReading	:= TRUE	);		
+		State := State + 1;	
 		
+	11: // Wait for finish
 		IF SDO_READ.ReadDataAvailable THEN
 			TPDO_Current_Number := SDO_READ.ReadData[0];			
 			State := State + 1;
 		END_IF
 		
 
-	6:	// TPDO Current mapped object
+	12:	// TPDO Current mapped object
 		SDO_READ(
-			ADSNetID		:= '5.156.6.243.3.1',				
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1A00 + TPDO_Nr,
 			CO_SubIndex 	:= 1,
 			DataLength 		:= 4,
-			StartReading	:= TRUE	);
+			StartReading	:= TRUE	);		
+		State := State + 1;	
 		
+	13: // Wait for finish
 		IF SDO_READ.ReadDataAvailable THEN
 			TPDO_Current_Mapped := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);							
 			State := 16;
@@ -162,276 +177,292 @@ CASE State OF
 		
 	// ********** Test steps **********
 	16:	// Init
-		CAN_Objects[Index].SDO_Read_Done := FALSE;
-		CAN_Objects[Index].SDO_Read_Value := 0;				
-		CAN_Objects[Index].SDO_Read_Error := 0;	
-		CAN_Objects[Index].SDO_Write_Done := FALSE;			
-		CAN_Objects[Index].SDO_Write_Error := 0;	
-		CAN_Objects[Index].RPDO_Done := FALSE;			
-		CAN_Objects[Index].RPDO_Error := 0;	
-		CAN_Objects[Index].TPDO_Done := FALSE;			
-		CAN_Objects[Index].TPDO_Error := 0;	
-
-		// Transform value for Write Test
-		WriteData[0] := DWORD_TO_BYTE(CAN_Objects[Index].SDO_Write_Value);
-		WriteData[1] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].SDO_Write_Value,8));
-		WriteData[2] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].SDO_Write_Value,16));
-		WriteData[3] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].SDO_Write_Value,24));
+		IF CAN_Objects[Index].Length_Tested THEN 
+			CAN_Objects[Index].Length_Tested := FALSE;
+			CAN_Objects[Index].Length_Error := 0;
+		ELSE
+			CAN_Objects[Index].Length_Target := CAN_Objects[Index].Length; 
+		END_IF
 		
+		IF CAN_Objects[Index].Readable_Tested THEN 
+			CAN_Objects[Index].Readable_Tested := FALSE;
+			CAN_Objects[Index].Readable_Error := 0;
+			CAN_Objects[Index].Read_Value := 0;
+		ELSE
+			CAN_Objects[Index].Readable_Target := CAN_Objects[Index].Readable;
+		END_IF
+		
+		IF CAN_Objects[Index].Writable_Tested THEN 
+	    	CAN_Objects[Index].Writable_Tested := FALSE;
+			CAN_Objects[Index].Writable_Error := 0; 
+			CAN_Objects[Index].Write_Value := 0;
+		ELSE		
+			CAN_Objects[Index].Writable_Target := CAN_Objects[Index].Writable;
+		END_IF
+				
+		IF CAN_Objects[Index].RPDO_Mappable_Tested THEN 
+	    	CAN_Objects[Index].RPDO_Mappable_Tested := FALSE;
+			CAN_Objects[Index].RPDO_Mappable_Error := 0; 
+		ELSE		
+			CAN_Objects[Index].RPDO_Mappable_Target := CAN_Objects[Index].RPDO_Mappable;
+		END_IF
+		
+		IF CAN_Objects[Index].TPDO_Mappable_Tested THEN 
+	    	CAN_Objects[Index].TPDO_Mappable_Tested := FALSE;
+			CAN_Objects[Index].TPDO_Mappable_Error := 0; 
+		ELSE		
+			CAN_Objects[Index].TPDO_Mappable_Target := CAN_Objects[Index].TPDO_Mappable;
+		END_IF	
+
 		State := State + 1;
 			
 		
 	17:	// Read Test
-		IF CAN_Objects[Index].CAN_Object.Readable THEN
-			SDO_READ(
-				ADSNetID		:= '5.156.6.243.3.1',				
-				PortNr 		 	:= 16#1000 + NodeID,
-				CO_Index 		:= CAN_Objects[Index].CAN_Object.Index,
-				CO_SubIndex 	:= CAN_Objects[Index].CAN_Object.Subindex,
-				DataLength 		:= CAN_Objects[Index].CAN_Object.Length,
-				StartReading	:= TRUE	);
-			
-			IF SDO_READ.ReadDataAvailable THEN
-				CAN_Objects[Index].SDO_Read_Done := TRUE;
-				CAN_Objects[Index].SDO_Read_Value := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);				
-				CAN_Objects[Index].SDO_Read_Error := SDO_READ.Error;
-				IF CAN_Objects[Index].WriteTest_with_CurrentValue THEN	
-					WriteData := SDO_READ.ReadData; 
-				END_IF			
+		SDO_READ(
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= CAN_Objects[Index].Index,
+			CO_SubIndex 	:= CAN_Objects[Index].Subindex,
+			DataLength 		:= CAN_Objects[Index].Length,
+			StartReading	:= TRUE	);		
+		State := State + 1;
 		
-				State := State + 1;
-			END_IF
-		ELSE
-			// Not done -> Result
-			CAN_Objects[Index].SDO_Read_Done := FALSE;
-			CAN_Objects[Index].SDO_Read_Value := 0;				
-			CAN_Objects[Index].SDO_Read_Error := 0;
-						
-			State := State + 1;	
+	18: // Read Test, wait for finish
+		IF SDO_READ.ReadDataAvailable THEN
+			CAN_Objects[Index].Readable_Tested := TRUE;
+			CAN_Objects[Index].Read_Value := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);	
+			CAN_Objects[Index].Readable_Error := SDO_READ.Error;
+			
+			// LENGTH setzen !!!	
+								
+			State := State + 1;
 		END_IF
 	
 		
-	18:	// Write Test
-		IF CAN_Objects[Index].CAN_Object.Writeable THEN
-			SDO_WRITE(
-				ADSNetID	:= '5.156.6.243.3.1',
-				PortNr 		 := 16#1000 + NodeID,
-				CO_Index 	 := CAN_Objects[Index].CAN_Object.Index,
-				CO_SubIndex  := CAN_Objects[Index].CAN_Object.Subindex,
-				DataLength 	 := CAN_Objects[Index].CAN_Object.Length,
-				StartWriting := TRUE,
-				WriteData 	 := WriteData );
+	19:	// Write Test
+		IF CAN_Objects[Index].Write_Value_Usage THEN CAN_Objects[Index].Write_Value := CAN_Objects[Index].Read_Value; END_IF
+		FOR i := 0 TO CAN_Objects[Index].Length - 1 DO
+			Data[i] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].Write_Value, (8*i)));
+		END_FOR;
 			
-			IF SDO_WRITE.WriteDataFinished THEN
-				CAN_Objects[Index].SDO_Write_Done := TRUE;
-				CAN_Objects[Index].SDO_Write_Value := SHL(BYTE_TO_DWORD(SDO_Write.WriteData[3]),24) + SHL(BYTE_TO_DWORD(SDO_Write.WriteData[2]),16) + SHL(BYTE_TO_DWORD(SDO_Write.WriteData[1]),8) + BYTE_TO_DWORD(SDO_Write.WriteData[0]);				
-				CAN_Objects[Index].SDO_Write_Error := SDO_WRITE.Error;
-				
-				State := State + 1;
-			END_IF
-		ELSE
-			CAN_Objects[Index].SDO_Write_Done := FALSE;
-			CAN_Objects[Index].SDO_Write_Value := 0;				
-			CAN_Objects[Index].SDO_Write_Error := 0;	
+		SDO_WRITE(
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
+			CO_Index 	 := CAN_Objects[Index].Index,
+			CO_SubIndex  := CAN_Objects[Index].Subindex,
+			DataLength 	 := CAN_Objects[Index].Length,
+			StartWriting := TRUE,
+			WriteData 	 := Data );		
+		State := State + 1;
 			
-			State := State + 1;	
-		END_IF			
-
-		
-	19: // RPDO test
-		IF CAN_Objects[Index].CAN_Object.RPDO_Mappable THEN
-			WriteData[0] := CAN_Objects[Index].CAN_Object.Length * 8;
-			WriteData[1] := CAN_Objects[Index].CAN_Object.SubIndex;
-			WriteData[2] := DWORD_TO_BYTE(CAN_Objects[Index].CAN_Object.Index);
-			WriteData[3] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].CAN_Object.Index,8));
-		
-			SDO_WRITE(
-				ADSNetID	:= '5.156.6.243.3.1',
-				PortNr 		 := 16#1000 + NodeID,
-				CO_Index 	 := 16#1600 + RPDO_Nr,
-				CO_SubIndex  := 1,
-				DataLength 	 := 4,
-				StartWriting := TRUE,
-				WriteData 	 := WriteData );			
-			
-			IF SDO_WRITE.WriteDataFinished THEN
-				CAN_Objects[Index].RPDO_Done := TRUE;
-				CAN_Objects[Index].RPDO_Error := SDO_WRITE.Error;
-				
-				State := State + 1;
-			END_IF
-		ELSE
-			CAN_Objects[Index].RPDO_Done := FALSE;	
-			CAN_Objects[Index].RPDO_Error := 0;	
-			
-			State := State + 1;	
-		END_IF			
-
-				
-	20: // TPDO test
-		IF CAN_Objects[Index].CAN_Object.TPDO_Mappable THEN
-			WriteData[0] := CAN_Objects[Index].CAN_Object.Length * 8;
-			WriteData[1] := CAN_Objects[Index].CAN_Object.SubIndex;
-			WriteData[2] := DWORD_TO_BYTE(CAN_Objects[Index].CAN_Object.Index);
-			WriteData[3] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].CAN_Object.Index,8));
-		
-			SDO_WRITE(
-				ADSNetID	:= '5.156.6.243.3.1',
-				PortNr 		 := 16#1000 + NodeID,
-				CO_Index 	 := 16#1A00 + TPDO_Nr,
-				CO_SubIndex  := 1,
-				DataLength 	 := 4,
-				StartWriting := TRUE,
-				WriteData 	 := WriteData );			
-			
+	20: // Write Test, wait for finish
 		IF SDO_WRITE.WriteDataFinished THEN
-				CAN_Objects[Index].TPDO_Done := TRUE;
-				CAN_Objects[Index].TPDO_Error := SDO_WRITE.Error;
-				
-				State := State + 1;
-			END_IF
-		ELSE
-			CAN_Objects[Index].TPDO_Done := FALSE;	
-			CAN_Objects[Index].TPDO_Error := 0;	
+			CAN_Objects[Index].Writable_Tested := TRUE;
+			CAN_Objects[Index].Write_Value := SHL(BYTE_TO_DWORD(SDO_Write.WriteData[3]),24) + SHL(BYTE_TO_DWORD(SDO_Write.WriteData[2]),16) + SHL(BYTE_TO_DWORD(SDO_Write.WriteData[1]),8) + BYTE_TO_DWORD(SDO_Write.WriteData[0]);				
+			CAN_Objects[Index].Writable_Error := SDO_WRITE.Error;
 			
-			State := State + 1;	
+			
+			// Falls Read-Test nicht erfolgreich -> LENGTH hier setzen !!!	
+			
+		
+			State := State + 1;
+		END_IF
+
+		
+	21: // RPDO test	
+		Data[0] := CAN_Objects[Index].Length * 8;
+		Data[1] := CAN_Objects[Index].SubIndex;
+		Data[2] := DWORD_TO_BYTE(CAN_Objects[Index].Index);
+		Data[3] := DWORD_TO_BYTE(SHR(CAN_Objects[Index].Index,8));
+			
+		SDO_WRITE(
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
+			CO_Index 	 := 16#1600 + RPDO_Nr,
+			CO_SubIndex  := 1,
+			DataLength 	 := 4,
+			StartWriting := TRUE,
+			WriteData 	 := Data );	
+		State := State + 1;
+			
+	22: // RPDO test, wait for finish
+		IF SDO_WRITE.WriteDataFinished THEN
+			CAN_Objects[Index].RPDO_Mappable_Tested := TRUE;
+			CAN_Objects[Index].RPDO_Mappable_Error := SDO_WRITE.Error;
+									
+			State := State + 1;
+		END_IF	
+
+				
+	23: // TPDO test
+		// Value for TPDO test is the same like RPDO test
+ 
+		SDO_WRITE(
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
+			CO_Index 	 := 16#1A00 + TPDO_Nr,
+			CO_SubIndex  := 1,
+			DataLength 	 := 4,
+			StartWriting := TRUE,
+			WriteData 	 := Data );	
+		State := State + 1;
+			
+	24: // TPDO test, wait for finish
+		IF SDO_WRITE.WriteDataFinished THEN
+			CAN_Objects[Index].TPDO_Mappable_Tested := TRUE;
+			CAN_Objects[Index].TPDO_Mappable_Error := SDO_WRITE.Error;
+			
+			State := State + 1;
 		END_IF
 		
 		
-	21: // Next object
-		CAN_Objects[Index].Error := (CAN_Objects[Index].SDO_Read_Error > 0) OR (CAN_Objects[Index].SDO_Write_Error > 0) OR (CAN_Objects[Index].RPDO_Error > 0) OR (CAN_Objects[Index].TPDO_Error > 0);
+	25: // Next object
+		CAN_Objects[Index].Error := (CAN_Objects[Index].Readable_Error > 0) OR (CAN_Objects[Index].Writable_Error > 0) OR (CAN_Objects[Index].RPDO_Mappable_Error > 0) OR (CAN_Objects[Index].TPDO_Mappable_Error > 0);
 			
 		IF Index < UPPER_BOUND(CAN_Objects,1) THEN
 			Index := Index + 1;
 			State := 16;
 		ELSE
-			State := 50;
+			State := 128;
 		END_IF
 	
 		
 	// ********** Ending steps **********		
-	50:	// RPDO Reset mapped object
-		WriteData[0] := DWORD_TO_BYTE(RPDO_Current_Mapped);
-		WriteData[1] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,8));
-		WriteData[2] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,16));
-		WriteData[3] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,24));
-		
+	128: // RPDO Reset mapped object
+		Data[0] := DWORD_TO_BYTE(RPDO_Current_Mapped);
+		Data[1] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,8));
+		Data[2] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,16));
+		Data[3] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,24));
 		SDO_WRITE(
-			ADSNetID		:= '5.156.6.243.3.1',			
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,			
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1600 + TPDO_Nr,
 			CO_SubIndex 	:= 1,
 			DataLength 		:= 4,
 			StartWriting	:= TRUE,
-			WriteData 	 	:= WriteData );
-		
+			WriteData 	 	:= Data );
+		State := State + 1;
+			
+	129: // RPDO Reset mapped object, wait for finish		
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF		
 			
 		
-	51:	// RPDO Reset Number of mapped objects
-		WriteData[0] := RPDO_Current_Number;
+	130: // RPDO Reset Number of mapped objects
+		Data[0] := RPDO_Current_Number;
 			
 		SDO_WRITE(
-			ADSNetID		:= '5.156.6.243.3.1',
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1600 + RPDO_Nr,
 			CO_SubIndex 	:= 0,
 			DataLength 		:= 1,
 			StartWriting 	:= TRUE,
-			WriteData 	 	:= WriteData );
-		
+			WriteData 	 	:= Data );
+		State := State + 1;
+			
+	131: // RPDO Reset Number of mapped objects, wait for finish			
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF			
 
 		
-	52:	// RPDO reactivate
-		WriteData[3] := 0;
-		WriteData[2] := 0;			
-		WriteData[1] := RPDO_Nr + 1;
-		WriteData[0] := NodeID;	
+	132: // RPDO reactivate
+		Data[3] := 0;
+		Data[2] := 0;			
+		Data[1] := RPDO_Nr + 1;
+		Data[0] := NodeID;	
 			
 		SDO_WRITE(
-			ADSNetID	:= '5.156.6.243.3.1',
-			PortNr 		 := 16#1000 + NodeID,
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
 			CO_Index 	 := 16#1400 + RPDO_Nr,
 			CO_SubIndex  := 1,
 			DataLength 	 := 4,
 			StartWriting := TRUE,
-			WriteData 	 := WriteData );
-		
+			WriteData 	 := Data );
+		State := State + 1;
+			
+	133: // RPDO reactivate, wait for finish	
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF	
 		
 		
-	53:	// TPDO Reset mapped object
-		WriteData[0] := DWORD_TO_BYTE(TPDO_Current_Mapped);
-		WriteData[1] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,8));
-		WriteData[2] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,16));
-		WriteData[3] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,24));
+	134: // TPDO Reset mapped object
+		Data[0] := DWORD_TO_BYTE(TPDO_Current_Mapped);
+		Data[1] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,8));
+		Data[2] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,16));
+		Data[3] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,24));
 		
 		SDO_WRITE(
-			ADSNetID		:= '5.156.6.243.3.1',			
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,			
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1A00 + TPDO_Nr,
 			CO_SubIndex 	:= 1,
 			DataLength 		:= 4,
 			StartWriting	:= TRUE,
-			WriteData 	 	:= WriteData );
-		
+			WriteData 	 	:= Data );
+		State := State + 1;
+			
+	135: // TPDO Reset mapped object, wait for finish	
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF			
 			
 		
-	54:	// TPDO Reset Number of mapped objects
-		WriteData[0] := TPDO_Current_Number;
+	136:// TPDO Reset Number of mapped objects
+		Data[0] := TPDO_Current_Number;
 			
 		SDO_WRITE(
-			ADSNetID		:= '5.156.6.243.3.1',
-			PortNr 		 	:= 16#1000 + NodeID,
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
 			CO_Index 		:= 16#1A00 + RPDO_Nr,
 			CO_SubIndex 	:= 0,
 			DataLength 		:= 1,
 			StartWriting 	:= TRUE,
-			WriteData 	 	:= WriteData );
-		
+			WriteData 	 	:= Data );
+		State := State + 1;
+			
+	137: // TPDO Reset Number of mapped objects, wait for finish	
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF			
 
 		
-	55:	// TPDO reactivate
-		WriteData[3] := 0;
-		WriteData[2] := 0;			
-		WriteData[1] := TPDO_Nr;
-		WriteData[0] := NodeID + 16#80;	
+	138: // TPDO reactivate
+		Data[3] := 0;
+		Data[2] := 0;			
+		Data[1] := TPDO_Nr;
+		Data[0] := NodeID + 16#80;	
 			
 		SDO_WRITE(
-			ADSNetID	:= '5.156.6.243.3.1',
-			PortNr 		 := 16#1000 + NodeID,
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
 			CO_Index 	 := 16#1400 + RPDO_Nr,
 			CO_SubIndex  := 1,
 			DataLength 	 := 4,
 			StartWriting := TRUE,
-			WriteData 	 := WriteData );
-		
+			WriteData 	 := Data );
+		State := State + 1;
+			
+	139: // TPDO reactivate, wait for finish	
 		IF SDO_WRITE.WriteDataFinished THEN
 			State := State + 1;
 		END_IF	
 						
 	
-	56: // NMT Set to operational
+	140: // NMT Set to operational
 		NMT_WRITE(
-			ADSNetID	:= '5.156.6.243.3.1',
-			PORTNr		:= 16#1000 + NodeID,
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PORTNr		:= 16#1000 + GLB.NodeID,
 			ADSSTATE	:= ADSSTATE_RUN,
 			DEVSTATE	:= 1,
 			StartWriting:=TRUE );	
-		
+		State := State + 1;
+			
+	141: // RPDO Reset Number of mapped objects, wait for finish	
 		IF NMT_WRITE.WriteDataFinished THEN
 			State := 255;	
 		END_IF
@@ -456,43 +487,61 @@ END_CASE
       <LineId Id="132" Count="0" />
       <LineId Id="73" Count="0" />
       <LineId Id="584" Count="0" />
-      <LineId Id="394" Count="9" />
+      <LineId Id="394" Count="0" />
+      <LineId Id="1294" Count="0" />
+      <LineId Id="395" Count="5" />
+      <LineId Id="1295" Count="0" />
+      <LineId Id="1298" Count="0" />
+      <LineId Id="1297" Count="0" />
+      <LineId Id="1299" Count="0" />
+      <LineId Id="401" Count="0" />
+      <LineId Id="403" Count="0" />
       <LineId Id="600" Count="0" />
-      <LineId Id="404" Count="2" />
+      <LineId Id="404" Count="1" />
+      <LineId Id="1304" Count="0" />
       <LineId Id="723" Count="1" />
       <LineId Id="762" Count="2" />
       <LineId Id="761" Count="0" />
       <LineId Id="765" Count="0" />
       <LineId Id="725" Count="0" />
-      <LineId Id="727" Count="6" />
-      <LineId Id="735" Count="1" />
+      <LineId Id="727" Count="5" />
+      <LineId Id="1300" Count="1" />
+      <LineId Id="1303" Count="0" />
+      <LineId Id="733" Count="0" />
+      <LineId Id="736" Count="0" />
       <LineId Id="741" Count="0" />
       <LineId Id="608" Count="0" />
       <LineId Id="748" Count="1" />
       <LineId Id="610" Count="0" />
-      <LineId Id="612" Count="6" />
-      <LineId Id="1057" Count="0" />
+      <LineId Id="612" Count="5" />
+      <LineId Id="1305" Count="2" />
+      <LineId Id="618" Count="0" />
       <LineId Id="621" Count="0" />
       <LineId Id="629" Count="1" />
       <LineId Id="585" Count="0" />
       <LineId Id="631" Count="0" />
-      <LineId Id="788" Count="8" />
-      <LineId Id="798" Count="1" />
+      <LineId Id="788" Count="7" />
+      <LineId Id="1308" Count="2" />
+      <LineId Id="796" Count="0" />
+      <LineId Id="799" Count="0" />
       <LineId Id="801" Count="0" />
       <LineId Id="803" Count="1" />
       <LineId Id="766" Count="0" />
       <LineId Id="768" Count="14" />
+      <LineId Id="1312" Count="1" />
       <LineId Id="784" Count="2" />
       <LineId Id="767" Count="0" />
       <LineId Id="787" Count="0" />
       <LineId Id="721" Count="0" />
       <LineId Id="720" Count="0" />
       <LineId Id="653" Count="6" />
+      <LineId Id="1315" Count="1" />
       <LineId Id="661" Count="1" />
       <LineId Id="664" Count="0" />
       <LineId Id="666" Count="1" />
       <LineId Id="648" Count="0" />
       <LineId Id="669" Count="8" />
+      <LineId Id="1318" Count="1" />
       <LineId Id="679" Count="1" />
       <LineId Id="682" Count="0" />
       <LineId Id="684" Count="0" />
@@ -502,46 +551,59 @@ END_CASE
       <LineId Id="650" Count="0" />
       <LineId Id="412" Count="0" />
       <LineId Id="411" Count="0" />
-      <LineId Id="167" Count="1" />
-      <LineId Id="166" Count="0" />
-      <LineId Id="217" Count="0" />
-      <LineId Id="216" Count="0" />
-      <LineId Id="529" Count="0" />
-      <LineId Id="232" Count="0" />
-      <LineId Id="532" Count="0" />
-      <LineId Id="531" Count="0" />
-      <LineId Id="268" Count="0" />
-      <LineId Id="234" Count="0" />
-      <LineId Id="233" Count="0" />
-      <LineId Id="235" Count="0" />
-      <LineId Id="237" Count="2" />
+      <LineId Id="1126" Count="1" />
+      <LineId Id="1111" Count="0" />
+      <LineId Id="1128" Count="0" />
+      <LineId Id="1124" Count="0" />
+      <LineId Id="1098" Count="0" />
+      <LineId Id="1102" Count="0" />
+      <LineId Id="1110" Count="0" />
+      <LineId Id="1121" Count="1" />
+      <LineId Id="1176" Count="0" />
+      <LineId Id="1118" Count="0" />
+      <LineId Id="1123" Count="0" />
+      <LineId Id="1116" Count="0" />
+      <LineId Id="1104" Count="0" />
+      <LineId Id="1170" Count="1" />
+      <LineId Id="1112" Count="0" />
+      <LineId Id="1177" Count="0" />
+      <LineId Id="1107" Count="0" />
+      <LineId Id="1172" Count="0" />
+      <LineId Id="1114" Count="0" />
+      <LineId Id="1109" Count="0" />
+      <LineId Id="1174" Count="1" />
+      <LineId Id="1129" Count="0" />
+      <LineId Id="1133" Count="0" />
+      <LineId Id="1173" Count="0" />
+      <LineId Id="1154" Count="0" />
+      <LineId Id="1169" Count="0" />
+      <LineId Id="1178" Count="4" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="239" Count="0" />
       <LineId Id="156" Count="1" />
       <LineId Id="315" Count="0" />
       <LineId Id="120" Count="0" />
-      <LineId Id="122" Count="0" />
       <LineId Id="11" Count="0" />
       <LineId Id="348" Count="0" />
       <LineId Id="350" Count="0" />
       <LineId Id="13" Count="2" />
       <LineId Id="359" Count="0" />
-      <LineId Id="246" Count="0" />
+      <LineId Id="1258" Count="2" />
       <LineId Id="20" Count="0" />
       <LineId Id="226" Count="0" />
       <LineId Id="150" Count="0" />
       <LineId Id="144" Count="0" />
-      <LineId Id="220" Count="0" />
-      <LineId Id="1060" Count="2" />
+      <LineId Id="1206" Count="0" />
+      <LineId Id="1194" Count="0" />
+      <LineId Id="1207" Count="0" />
       <LineId Id="43" Count="0" />
       <LineId Id="24" Count="0" />
-      <LineId Id="62" Count="0" />
-      <LineId Id="227" Count="0" />
-      <LineId Id="151" Count="2" />
-      <LineId Id="219" Count="0" />
-      <LineId Id="60" Count="0" />
-      <LineId Id="54" Count="0" />
       <LineId Id="77" Count="0" />
       <LineId Id="230" Count="0" />
-      <LineId Id="169" Count="1" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="1254" Count="2" />
+      <LineId Id="1251" Count="0" />
+      <LineId Id="1257" Count="0" />
       <LineId Id="197" Count="0" />
       <LineId Id="351" Count="0" />
       <LineId Id="356" Count="0" />
@@ -549,35 +611,37 @@ END_CASE
       <LineId Id="201" Count="0" />
       <LineId Id="358" Count="0" />
       <LineId Id="355" Count="0" />
-      <LineId Id="180" Count="1" />
+      <LineId Id="1263" Count="0" />
+      <LineId Id="1262" Count="0" />
+      <LineId Id="1261" Count="0" />
+      <LineId Id="181" Count="0" />
       <LineId Id="183" Count="2" />
+      <LineId Id="1222" Count="2" />
       <LineId Id="254" Count="0" />
-      <LineId Id="186" Count="5" />
-      <LineId Id="1063" Count="0" />
-      <LineId Id="192" Count="1" />
+      <LineId Id="1241" Count="0" />
+      <LineId Id="186" Count="1" />
       <LineId Id="384" Count="0" />
       <LineId Id="568" Count="0" />
-      <LineId Id="440" Count="1" />
-      <LineId Id="488" Count="0" />
-      <LineId Id="487" Count="0" />
-      <LineId Id="480" Count="1" />
-      <LineId Id="486" Count="0" />
+      <LineId Id="440" Count="0" />
+      <LineId Id="1244" Count="2" />
+      <LineId Id="1242" Count="0" />
+      <LineId Id="1247" Count="0" />
       <LineId Id="456" Count="7" />
-      <LineId Id="465" Count="0" />
+      <LineId Id="1266" Count="0" />
+      <LineId Id="1264" Count="1" />
       <LineId Id="489" Count="1" />
-      <LineId Id="492" Count="5" />
-      <LineId Id="499" Count="0" />
-      <LineId Id="1064" Count="0" />
-      <LineId Id="500" Count="0" />
-      <LineId Id="449" Count="0" />
+      <LineId Id="492" Count="3" />
       <LineId Id="575" Count="0" />
       <LineId Id="570" Count="0" />
       <LineId Id="443" Count="0" />
-      <LineId Id="503" Count="13" />
-      <LineId Id="518" Count="9" />
-      <LineId Id="1065" Count="0" />
-      <LineId Id="528" Count="0" />
-      <LineId Id="444" Count="0" />
+      <LineId Id="1248" Count="0" />
+      <LineId Id="1250" Count="0" />
+      <LineId Id="509" Count="6" />
+      <LineId Id="1267" Count="2" />
+      <LineId Id="516" Count="0" />
+      <LineId Id="519" Count="0" />
+      <LineId Id="1240" Count="0" />
+      <LineId Id="521" Count="3" />
       <LineId Id="582" Count="0" />
       <LineId Id="446" Count="0" />
       <LineId Id="385" Count="0" />
@@ -593,12 +657,10 @@ END_CASE
       <LineId Id="960" Count="0" />
       <LineId Id="943" Count="0" />
       <LineId Id="989" Count="2" />
-      <LineId Id="986" Count="0" />
-      <LineId Id="992" Count="0" />
-      <LineId Id="987" Count="0" />
+      <LineId Id="986" Count="1" />
       <LineId Id="945" Count="5" />
+      <LineId Id="1273" Count="2" />
       <LineId Id="988" Count="0" />
-      <LineId Id="952" Count="0" />
       <LineId Id="1055" Count="1" />
       <LineId Id="958" Count="0" />
       <LineId Id="829" Count="0" />
@@ -606,28 +668,38 @@ END_CASE
       <LineId Id="959" Count="0" />
       <LineId Id="965" Count="3" />
       <LineId Id="979" Count="2" />
-      <LineId Id="972" Count="2" />
-      <LineId Id="976" Count="2" />
+      <LineId Id="972" Count="1" />
+      <LineId Id="1276" Count="2" />
+      <LineId Id="974" Count="0" />
+      <LineId Id="977" Count="1" />
       <LineId Id="830" Count="0" />
       <LineId Id="837" Count="0" />
       <LineId Id="864" Count="0" />
-      <LineId Id="922" Count="13" />
-      <LineId Id="937" Count="2" />
+      <LineId Id="922" Count="12" />
+      <LineId Id="1279" Count="2" />
+      <LineId Id="935" Count="0" />
+      <LineId Id="938" Count="1" />
       <LineId Id="921" Count="0" />
       <LineId Id="940" Count="1" />
-      <LineId Id="994" Count="13" />
-      <LineId Id="1054" Count="0" />
+      <LineId Id="994" Count="12" />
+      <LineId Id="1282" Count="2" />
+      <LineId Id="1007" Count="0" />
       <LineId Id="1052" Count="1" />
-      <LineId Id="1012" Count="13" />
-      <LineId Id="1027" Count="19" />
-      <LineId Id="1048" Count="3" />
+      <LineId Id="1012" Count="12" />
+      <LineId Id="1285" Count="2" />
+      <LineId Id="1025" Count="0" />
+      <LineId Id="1028" Count="17" />
+      <LineId Id="1288" Count="2" />
+      <LineId Id="1046" Count="0" />
+      <LineId Id="1049" Count="2" />
       <LineId Id="919" Count="0" />
       <LineId Id="806" Count="0" />
       <LineId Id="257" Count="0" />
       <LineId Id="324" Count="3" />
       <LineId Id="332" Count="0" />
+      <LineId Id="1291" Count="2" />
       <LineId Id="361" Count="0" />
-      <LineId Id="296" Count="1" />
+      <LineId Id="297" Count="0" />
       <LineId Id="282" Count="0" />
       <LineId Id="295" Count="0" />
       <LineId Id="592" Count="0" />

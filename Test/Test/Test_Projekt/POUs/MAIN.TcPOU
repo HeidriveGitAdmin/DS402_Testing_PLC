@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
   <POU Name="MAIN" Id="{ecd236f1-0845-4f99-85e2-7b5856c6ee40}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR		
-	Index 			: BYTE := 0;
-		
+	State			: INT			:= 255;
+	
 	Controlmode		: E_Controlmode;
 	
 	Current_State	: E_Statemachine_State;
@@ -37,8 +37,7 @@ VAR
 	bLED7 	AT%Q* 	: BOOL;
 	bLED8 	AT%Q* 	: BOOL;
 	
-	CAN_Object_Testing		: CAN_Object_Testing;
-	CAN_Object_Tests 		: ARRAY [0..2] OF ST_CAN_Object_Test;
+	CAN_Object_Testing		: FB_DS402_Object_Testing;
 			
 	Profile_Position_Mode	: Profile_Position_Mode;
 	
@@ -51,6 +50,8 @@ VAR
 	
 	NodeID			: BYTE := 2;
 	
+	Data		: ARRAY [0..255] OF BYTE;
+	
 	SDO_READ		: FB_SDO_READ;
 	ReadStart		: BOOL;
 	ReadError		: DWORD;
@@ -61,6 +62,8 @@ VAR
 	WriteStart		: BOOL;
 	WriteError		: DWORD;
 
+	Start_Testing	: FB_Sequenz_Testing;
+	
 	Position_set	: BOOL;
 	
 	Position_1		: DINT 	:= 0;
@@ -75,11 +78,28 @@ VAR
 	Quick_Stop		: BOOL := FALSE;
 	
 	New_Controlword	: WORD;
+		
+	Fehler: DWORD;
+	
+	Startsequence 	: ARRAY [0..12] OF E_Test_step 	:= [E_Test_step.Switch_on_disabled,															
+														E_Test_step.Velocity_window_30rpm,
+														E_Test_step.Velocity_window_100ms,	
+														E_Test_step.Mode_PVM,
+														E_Test_step.Acceleration_1000,
+														E_Test_step.Deceleration_1000,
+														E_Test_step.PVM_Velocity_1000,
+														E_Test_step.Ready_to_switch_on,
+														E_Test_step.Switched_on,
+														E_Test_step.Operation_enabled,
+														E_Test_step.Wait_1000ms, 
+														E_Test_step.Check_Statusword_Target_reached_200ms, 
+														E_Test_step.Switch_on_disabled];
+	
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// Determine state
-GET_STATE(PDO.Statusword, State => Current_State);
+Current_State := GET_STATE(PDO.Statusword);
 
 // Show State with LEDs on IO module
 bLED1 := (Current_State = E_Statemachine_State.Not_ready_to_switch_on);
@@ -96,7 +116,7 @@ STOP := NOT bTaster1 AND NOT bTaster2 AND NOT bTaster3 AND NOT bTaster4 AND NOT 
 
 // Reset if all taster are high
 IF bTaster1 AND bTaster2 AND bTaster3 AND bTaster4 AND bTaster5 AND bTaster6 AND bTaster7 AND bTaster8 THEN
-	Index := 0;
+	State := 0;
 END_IF
 
 // Detect rising egdes
@@ -113,7 +133,12 @@ bTaster8_Flanke(CLK := bTaster8);
 New_Controlword := PDO.Controlword;
 
 
-CASE Index OF	
+// Logger
+GLB.Logger();
+	
+
+
+CASE State OF	
 	// ********** Initial steps **********	
 	0: // Idle
 		CASE Controlmode OF
@@ -124,25 +149,27 @@ CASE Index OF
 			
 				IF NOT Stop THEN
 					IF 		bTaster1_Flanke.Q 	THEN	
-						// ********** Profile Torque Mode **********		
-						PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_torque_mode;	
-						Target_State 			:= E_statemachine_state.Operation_enabled;
-						PDO.Target_torque 		:= 50;
-						Index := 1;
-						
+						// ************** Object test **************	
+						State := 10;							
+					
 					ELSIF 	bTaster2_Flanke.Q 	THEN	
+						// ********* Test the Start Testing ********
+						State := 40;
+
+
+					//ELSIF 	bTaster2_Flanke.Q 	THEN							
 						// ********** Velocity Mode **********	
-						PDO.Mode_of_operation 	:= E_Mode_of_operation.Velocity_mode;
-						Target_State 			:= E_statemachine_state.Operation_enabled;
-						PDO.vl_target_velocity 	:= 1000;
-						Index := 1;
+						//PDO.Mode_of_operation 	:= E_Mode_of_operation.Velocity_mode;
+						//Target_State 			:= E_statemachine_state.Operation_enabled;
+						//PDO.vl_target_velocity 	:= 1000;
+						//State := 1;
 						
 					ELSIF 	bTaster3_Flanke.Q 	THEN
 						// ********** Profile Velocity Mode **********			
 						PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_velocity_mode;
 						Target_State 			:= E_statemachine_state.Operation_enabled;
 						PDO.Target_velocity 	:= 100000;			
-						Index := 1;
+						State := 1;
 			
 					ELSIF 	bTaster4_Flanke.Q 	THEN
 						// ********** Profile Position Mode **********	
@@ -151,7 +178,7 @@ CASE Index OF
 						PDO.Profile_velocity 	:= 1000000;						
 						PDO.Target_position 	:= Position_1;	
 						Start_Merker 			:= TRUE;
-						Index := 1;
+						State := 1;
 						
 					ELSIF 	bTaster5_Flanke.Q 	THEN
 						// ********** Profile Position Mode **********	
@@ -160,25 +187,29 @@ CASE Index OF
 						PDO.Profile_velocity 	:= 100000;
 						PDO.Target_position 	:= Position_2;	
 						Start_Merker 			:= TRUE;
-						Index := 1;
+						State := 1;
 						
-					ELSIF 	bTaster6_Flanke.Q 	THEN  
+					//ELSIF 	bTaster6_Flanke.Q 	THEN  
 						// ************* Homing mode **************		
-						Homing_parameters.Homing_mode := E_Homing_mode.Homing_on_current_position;			
-						Index := 20;				
+					//	Homing_parameters.Homing_mode := E_Homing_mode.Homing_on_current_position;			
+					//	State := 20;				
 						
-					ELSIF 	bTaster7_Flanke.Q 	THEN	
-						// ********** Encoder alignment **********				
-						Index := 30;								
+					ELSIF 	bTaster6_Flanke.Q 	THEN	
+						// Open / Close Logger File				
+						IF GLB.Logger.IsOpen THEN 
+							GLB.Logger(CloseFlag := TRUE);
+						ELSE
+							GLB.Logger(OpenFlag := TRUE);				
+						END_IF								
 					
+					ELSIF 	bTaster7_Flanke.Q	THEN
+						// Test: Write Logger Message						
+						GLB.Logger(Message:= 'Hallo');	
+
 					ELSIF 	bTaster8_Flanke.Q	THEN
-						// ********** CAN Object Testing **********	
-						CAN_Object_Tests[0].CAN_Object := DS402_Object_List.Controlword;
-						CAN_Object_Tests[1].CAN_Object := DS402_Object_List.Statusword;
-						CAN_Object_Tests[2].CAN_Object := DS402_Object_List.Position_actual_value;
-						CAN_Object_Testing(NodeID := NodeID, CAN_Objects := CAN_Object_Tests, Start := TRUE);		
-						Index := 10;	
-					
+						// Test: Save Logger Message						
+						GLB.Logger(SaveFlag := TRUE);
+						
 					END_IF			
 				END_IF					
 				New_Controlword := CONTROLWORD_STATE_CHANGE(Current_State, Target_State);	
@@ -186,7 +217,7 @@ CASE Index OF
 				
 			E_Controlmode.Manual:
 				// The user have to set the pdo values or the target state manually.
-				Index := 255;
+				State := 255;
 			
 		END_CASE
 		
@@ -194,9 +225,9 @@ CASE Index OF
 	1: // Start process
 		IF 	STOP THEN	
 			Target_State := E_statemachine_state.Switch_on_disabled;
-			Index := 3;	
+			State := 3;	
 		ELSIF Current_State = E_statemachine_state.Operation_enabled THEN 	
-			Index := 2;			
+			State := 2;			
 		END_IF;		
 	
 		New_Controlword := CONTROLWORD_STATE_CHANGE(Current_State, Target_State);	
@@ -215,55 +246,68 @@ CASE Index OF
 		IF STOP THEN 
 			Target_State := E_statemachine_state.Switch_on_disabled;
 			New_Controlword := CONTROLWORD_STATE_CHANGE(Current_State, Target_State);	
-			Index := 3; 
+			State := 3; 
 		END_IF
 					
 		
 	3:	// Stop process
 		Target_State := E_statemachine_state.Switch_on_disabled;	
 		New_Controlword := CONTROLWORD_STATE_CHANGE(Current_State, Target_State);			
-		IF Current_State = E_statemachine_state.Switch_on_disabled THEN	Index := 0;	END_IF
+		IF Current_State = E_statemachine_state.Switch_on_disabled THEN	State := 0;	END_IF
 		
 		
 	10:	// ********** CAN Object Testing **********	
-		CAN_Object_Testing(NodeID := NodeID, CAN_Objects := CAN_Object_Tests, Start := FALSE);			
-		IF CAN_Object_Testing.Finished AND STOP THEN	Index := 0;	END_IF
+		CAN_Object_Testing(Start := TRUE);	
+		State := State + 1;
+
+	11: // Wait for finish
+		CAN_Object_Testing(Start := FALSE);		
+		IF CAN_Object_Testing.Finished AND STOP THEN	
+			State := 0;	
+		END_IF
 			
 		
 	20:	// ************* Homing mode **************
 		Homing_mode(NodeID:=NodeID, Start:=TRUE, Current_State:=Current_State, Statusword:=PDO.Statusword, Homing_parameters:=Homing_parameters, Controlword=>New_Controlword, Mode_of_operation=>PDO.Mode_of_operation);
-		Index := Index + 1;
+		State := State + 1;
 	
 	21: // Wait for finish
 		Homing_mode(Start:=FALSE, Current_State:=Current_State, Statusword:=PDO.Statusword, Controlword=>New_Controlword);	
 		IF Homing_mode.Finished THEN
-			Index := 0;
+			State := 0;
 		END_IF
 		
 		
 	30:	// ********** Encoder Alignment ***********	
-		Encoder_Alignment(NodeID:=NodeID, Start:=TRUE, Current_State:=Current_State, Statusword:=PDO.Statusword, Controlword=>New_Controlword);
-		Index := Index + 1;
+		Encoder_Alignment(Start:=TRUE, Current_State:=Current_State, Statusword:=PDO.Statusword, Controlword=>New_Controlword);
+		State := State + 1;
 	
 	31: // Wait for finish
 		Encoder_Alignment(Start:=FALSE, Current_State:=Current_State, Statusword:=PDO.Statusword, Controlword=>New_Controlword);	
 		IF Encoder_Alignment.Finished THEN
-			Index := 0;
+			State := 0;
 		END_IF
+
 		
-		
-	255: // ************* Manual Mode *************	
-		IF Controlmode = E_Controlmode.Manual THEN
-			IF (Target_State <> E_Statemachine_State.unknown) THEN
-				New_Controlword := CONTROLWORD_STATE_CHANGE(Current_State, Target_State);	
-			END_IF			
-		ELSE	
-			Index := 0;			
-		END_IF	
-			
+	40:	// Test the Start Testing		
+		Start_Testing(Start:=TRUE, Sequence_Name:='Test Sequence', Step_list:=Startsequence);
+		State := State + 1;
 	
+	41: // Wait for finish
+		Start_Testing(Start:=FALSE);
+		New_Controlword := PDO.Controlword;		
+		IF Start_Testing.Finished THEN
+			State := 0;
+		END_IF
+
+		
+	255: // **************** Init *****************
+		GLB.Logger(OpenFlag:=TRUE);
+		State := 0;
+	
+		
 	ELSE	// Reset to Idle
-		Index := 0;
+		State := 0;
 	
 END_CASE	
 
@@ -277,13 +321,26 @@ PDO.Controlword := New_Controlword;]]></ST>
       <LineId Id="1811" Count="0" />
       <LineId Id="2195" Count="1" />
       <LineId Id="1812" Count="10" />
-      <LineId Id="1954" Count="2" />
-      <LineId Id="1823" Count="4" />
+      <LineId Id="1954" Count="1" />
+      <LineId Id="2933" Count="0" />
+      <LineId Id="2930" Count="2" />
+      <LineId Id="3030" Count="0" />
+      <LineId Id="3033" Count="0" />
+      <LineId Id="3032" Count="0" />
+      <LineId Id="1824" Count="3" />
       <LineId Id="1829" Count="0" />
       <LineId Id="2360" Count="0" />
       <LineId Id="1830" Count="2" />
       <LineId Id="2265" Count="0" />
-      <LineId Id="1833" Count="38" />
+      <LineId Id="1833" Count="1" />
+      <LineId Id="3035" Count="0" />
+      <LineId Id="1839" Count="0" />
+      <LineId Id="3241" Count="2" />
+      <LineId Id="3121" Count="0" />
+      <LineId Id="3123" Count="0" />
+      <LineId Id="3122" Count="0" />
+      <LineId Id="3120" Count="0" />
+      <LineId Id="1842" Count="29" />
       <LineId Id="1876" Count="0" />
       <LineId Id="2124" Count="0" />
       <LineId Id="2275" Count="0" />
@@ -291,13 +348,27 @@ PDO.Controlword := New_Controlword;]]></ST>
       <LineId Id="2042" Count="0" />
       <LineId Id="1878" Count="0" />
       <LineId Id="2040" Count="0" />
+      <LineId Id="2923" Count="3" />
       <LineId Id="2039" Count="0" />
       <LineId Id="2038" Count="0" />
-      <LineId Id="1880" Count="10" />
+      <LineId Id="1880" Count="1" />
+      <LineId Id="1886" Count="0" />
+      <LineId Id="3021" Count="2" />
+      <LineId Id="3020" Count="0" />
+      <LineId Id="2938" Count="0" />
+      <LineId Id="1888" Count="2" />
       <LineId Id="2358" Count="1" />
       <LineId Id="2354" Count="3" />
       <LineId Id="1891" Count="20" />
-      <LineId Id="1915" Count="20" />
+      <LineId Id="1915" Count="16" />
+      <LineId Id="2886" Count="0" />
+      <LineId Id="2888" Count="0" />
+      <LineId Id="2890" Count="0" />
+      <LineId Id="2889" Count="0" />
+      <LineId Id="2598" Count="0" />
+      <LineId Id="2597" Count="0" />
+      <LineId Id="2884" Count="1" />
+      <LineId Id="1934" Count="1" />
       <LineId Id="2024" Count="0" />
       <LineId Id="1936" Count="0" />
       <LineId Id="2026" Count="0" />
@@ -309,9 +380,19 @@ PDO.Controlword := New_Controlword;]]></ST>
       <LineId Id="2123" Count="0" />
       <LineId Id="2036" Count="0" />
       <LineId Id="2111" Count="8" />
-      <LineId Id="1937" Count="0" />
-      <LineId Id="2120" Count="0" />
-      <LineId Id="1938" Count="13" />
+      <LineId Id="3114" Count="0" />
+      <LineId Id="2443" Count="0" />
+      <LineId Id="3115" Count="0" />
+      <LineId Id="3125" Count="4" />
+      <LineId Id="3251" Count="0" />
+      <LineId Id="3130" Count="1" />
+      <LineId Id="3116" Count="0" />
+      <LineId Id="2437" Count="0" />
+      <LineId Id="3222" Count="0" />
+      <LineId Id="1938" Count="0" />
+      <LineId Id="1945" Count="2" />
+      <LineId Id="3034" Count="0" />
+      <LineId Id="1948" Count="3" />
       <LineId Id="1959" Count="0" />
       <LineId Id="1958" Count="0" />
       <LineId Id="1957" Count="0" />

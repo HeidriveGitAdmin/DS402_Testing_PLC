@@ -3,17 +3,45 @@
   <DUT Name="ST_CAN_Object" Id="{c81321fa-27d9-40fb-bcc5-010d85c6d767}">
     <Declaration><![CDATA[TYPE ST_CAN_Object :
 STRUCT
-	Name			: STRING(32);
-	Index			: WORD := 0;
-	Subindex		: BYTE := 0;
-	Length			: BYTE := 4;
-	Readable		: BOOL := TRUE;
-	Writeable		: BOOL := TRUE;
-	TPDO_Mappable	: BOOL := FALSE;
-	RPDO_Mappable	: BOOL := FALSE;
-	Default_Value	: DWORD := 0;
-	Mandatory		: BYTE := 0;
-	SubElements		: E_SubElement_types := E_SubElement_types.No;
+	Name				: STRING(80);
+	Index				: WORD := 0;
+	Subindex			: BYTE := 0;
+	
+	Length_Tested		: BOOL := FALSE;	// Test is performed
+	Length_Error		: DWORD:= 0;		// Error number
+	Length_Target		: BYTE := 4;		// Target value (must be set at test)
+	Length				: BYTE := 4;
+		
+	Readable_Tested		: BOOL := FALSE;	// Test is performed
+	Readable_Error		: DWORD:= 0;		// Error number
+	Readable_Target		: BOOL := TRUE;		// Target value (must be set at test)
+	Readable			: BOOL := TRUE;
+	
+	Writable_Tested		: BOOL := FALSE;	// Test is performed
+	Writable_Error		: DWORD:= 0;		// Error number
+	Writable_Target		: BOOL := TRUE;		// Target value (must be set at test)
+	Writable			: BOOL := TRUE;
+	
+	TPDO_Mappable_Tested: BOOL := FALSE;	// Test is performed
+	TPDO_Mappable_Error	: DWORD:= 0;		// Error number
+	TPDO_Mappable_Target: BOOL := FALSE;	// Target value (must be set at test)
+	TPDO_Mappable		: BOOL := FALSE;
+	
+	RPDO_Mappable_Tested: BOOL := FALSE;	// Test is performed
+	RPDO_Mappable_Error	: DWORD:= 0;		// Error number
+	RPDO_Mappable_Target: BOOL := FALSE;	// Target value (must be set at test)
+	RPDO_Mappable		: BOOL := FALSE;
+	
+	Error				: BOOL	:=FALSE;	// Has an error occurred in at least one test?
+	
+	Read_Value			: DWORD := 0;
+	Write_Value			: DWORD := 0;
+	Write_Value_Usage	: BOOL := FALSE;	// Which value should be used for the Writable test? True: Write_Value / False: Read_Value (in case the object is not readable '0' is used)
+	
+	Default_Value		: DWORD := 0;
+	
+	Mandatory			: BYTE := 0;
+	SubElements			: E_SubElement_types := E_SubElement_types.No;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

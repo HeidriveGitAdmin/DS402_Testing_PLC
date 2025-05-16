@@ -62,8 +62,8 @@ CASE Index OF
 		WriteData[2] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_acceleration,16));
 		WriteData[3] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_acceleration,24));	
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#6083,
 			CO_SubIndex		:= 16#00,
 			DataLength		:= 4,
@@ -87,8 +87,8 @@ CASE Index OF
 		WriteData[2] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_deceleration,16));
 		WriteData[3] := DWORD_TO_BYTE(SHR(Profile_velocity_parameters.Profile_deceleration,24));	
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#6084,
 			CO_SubIndex		:= 16#00,
 			DataLength		:= 4,

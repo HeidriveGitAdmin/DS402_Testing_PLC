@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
   <POU Name="FB_SDO_WRITE" Id="{e3bc69ea-410e-4399-8d69-488380ab061b}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_SDO_WRITE
 VAR_INPUT
@@ -34,7 +34,7 @@ state OF
 			LEN		:= DataLength,
 			SRCADDR	:= ADR(WriteData),
 			WRITE	:= TRUE,
-			TMOUT 	:= T#1S
+			TMOUT 	:= T#100MS
 		);
 		IF ADSWrite.err THEN
 			state := 2;
@@ -52,7 +52,7 @@ state OF
 			LEN		:= DataLength,
 			SRCADDR	:= ADR(WriteData),
 			WRITE	:= FALSE,
-			TMOUT 	:= T#1S
+			TMOUT 	:= T#100MS
 		);
 	END_IF
 	

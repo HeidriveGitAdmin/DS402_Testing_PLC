@@ -33,7 +33,7 @@ state OF
 			LEN		:= 4,
 			SRCADDR	:= ADR(WriteData),
 			WRITE	:= TRUE,
-			TMOUT 	:= T#1S
+			TMOUT 	:= T#100MS
 		);
 		IF ADSWrite.err THEN
 			state := 2;
@@ -51,7 +51,7 @@ state OF
 			LEN		:= 4,
 			SRCADDR	:= ADR(WriteData),
 			WRITE	:= FALSE,
-			TMOUT 	:= T#1S
+			TMOUT 	:= T#100MS
 		);
 	END_IF
 	

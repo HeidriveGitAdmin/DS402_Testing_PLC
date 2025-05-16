@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <GVL Name="Manufacturer_specific_Object_List" Id="{131bd9b2-16e3-43c5-a702-cfa197dcc4d7}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	Current_Offset_Feedback_NrOfObjects	: ST_CAN_Object	:= (Name:='Current Offset Feedback_NrOfObjects',	Index:=16#2005, 				Length:=1,	Default_Value:=3);
+	Current_Offset_Feedback_Phase_A		: ST_CAN_Object	:= (Name:='Current Offset Feedback_Phase A', 		Index:=16#2005,	Subindex:=1);
+	Current_Offset_Feedback_Phase_B		: ST_CAN_Object	:= (Name:='Current Offset Feedback_Phase B', 		Index:=16#2005,	Subindex:=2);
+	Current_Offset_Feedback_Phase_C		: ST_CAN_Object	:= (Name:='Current Offset Feedback_Phase C', 		Index:=16#2005,	Subindex:=3);
+	VF_Commutation_Frequency			: ST_CAN_Object := (Name:='VF Commutation Frequency', 				Index:=16#2008, 												Default_Value:=5);
+	Motor_Feedback_Current_NrOfObjects	: ST_CAN_Object := (Name:='Motor Feedback Current_NrOfObjects', 	Index:=16#2020,					Length:=1, 	Default_Value:=3);
+	Motor_Feedback_Current_Phase_A		: ST_CAN_Object := (Name:='Motor Feedback Current_Phase A', 		Index:=16#2020,	Subindex:=1);
+	Motor_Feedback_Current_Phase_B		: ST_CAN_Object := (Name:='Motor Feedback Current_Phase B', 		Index:=16#2020,	Subindex:=2);
+	Motor_Feedback_Current_Phase_C		: ST_CAN_Object := (Name:='Motor Feedback Current_Phase C', 		Index:=16#2020,	Subindex:=3);
+	PWM_duty_cycle_NrOfObjects			: ST_CAN_Object := (Name:='PWM duty cycle_NrOfObjects', 			Index:=16#2022,					Length:=1, 	Default_Value:=3);
+	PWM_duty_cycle_Phase_A				: ST_CAN_Object := (Name:='PWM duty cycle_Phase A', 				Index:=16#2022,	Subindex:=1);
+	PWM_duty_cycle_Phase_B				: ST_CAN_Object := (Name:='PWM duty cycle_Phase B', 				Index:=16#2022,	Subindex:=2);
+	PWM_duty_cycle_Phase_C				: ST_CAN_Object := (Name:='PWM duty cycle_Phase C', 				Index:=16#2022,	Subindex:=3);
+	Electrical_commutation_Degrees		: ST_CAN_Object := (Name:='Electrical commutation Degrees', 		Index:=16#2025);
+	Current_limit						: ST_CAN_Object := (Name:='Current limit', 							Index:=16#2028);
+	Peak_current						: ST_CAN_Object := (Name:='Peak current', 							Index:=16#2029, 							Default_Value:=180);
+	Continuous_Current					: ST_CAN_Object	:= (Name:='Continuous Current', 					Index:=16#202A, 							Default_Value:=100);
+	Direct_axis_NrOfObjects				: ST_CAN_Object := (Name:='Direct axis_NrOfObjects',				Index:=16#2030,					Length:=1, 	Default_Value:=4);
+	Direct_axis_Current_Feedback		: ST_CAN_Object := (Name:='Direct axis_Current Feedback', 			Index:=16#2030,	Subindex:=1);
+	Direct_axis_Current_Error			: ST_CAN_Object := (Name:='Direct axis_Current Error', 				Index:=16#2030,	Subindex:=2);
+	Direct_axis_Reference_current		: ST_CAN_Object := (Name:='Direct axis_Reference current', 			Index:=16#2030,	Subindex:=3);
+	Direct_axis_Voltage_demand			: ST_CAN_Object := (Name:='Direct axis_Voltage demand', 			Index:=16#2030,	Subindex:=4);
+	Quadrature_axis_NrOfObjects			: ST_CAN_Object := (Name:='Quadrature axis_NrOfObjects', 			Index:=16#2031,					Length:=1, 	Default_Value:=4);
+	Quadrature_axis_Current_Feedback	: ST_CAN_Object := (Name:='Quadrature axis_Current Feedback', 		Index:=16#2031,	Subindex:=1);
+	Quadrature_axis_Current_Error		: ST_CAN_Object := (Name:='Quadrature axis_Current Error', 			Index:=16#2031,	Subindex:=2);
+	Quadrature_axis_Reference_current	: ST_CAN_Object := (Name:='Quadrature axis_Reference current', 		Index:=16#2031,	Subindex:=3);
+	Quadrature_axis_Voltage_demand		: ST_CAN_Object := (Name:='Quadrature axis_Voltage demand', 		Index:=16#2031,	Subindex:=4);
+	Current_Following_Error_NrOfObjects	: ST_CAN_Object := (Name:='Current Following Error_NrOfObjects', 	Index:=16#2034,					Length:=1, 	Default_Value:=2);
+	Current_Following_Error_Window		: ST_CAN_Object := (Name:='Current Following Error_Window', 		Index:=16#2034,	Subindex:=1,	Length:=2, 						Default_Value:=7);
+	Current_Following_Error_Time_Out	: ST_CAN_Object := (Name:='Current Following Error_Time Out', 		Index:=16#2034,	Subindex:=2,	Length:=2, 						Default_Value:=8);
+	Homing_Block_NrOfObjects			: ST_CAN_Object := (Name:='Homing Block_NrOfObjects', 				Index:=16#2035,					Length:=1, 	Default_Value:=2);
+	Homing_Block_Blocking_current		: ST_CAN_Object := (Name:='Homing Block_Blocking current', 			Index:=16#2035,	Subindex:=1,	Length:=2);
+	Homing_Block_Blocking_time			: ST_CAN_Object := (Name:='Homing Block_Blocking time', 			Index:=16#2035,	Subindex:=2,	Length:=2);
+	I2T_NrOfObjects						: ST_CAN_Object := (Name:='I2T_NrOfObjects', 						Index:=16#2038,					Length:=1, 	Default_Value:=2);
+	I2T_Motor_Thermal_Saturation		: ST_CAN_Object := (Name:='I2T_Motor Thermal Saturation', 			Index:=16#2038,	Subindex:=1,	Length:=2);
+	I2T_Drive_Thermal_Saturation		: ST_CAN_Object := (Name:='I2T_Drive Thermal Saturation', 			Index:=16#2038,	Subindex:=2,	Length:=2);
+	Torque_Feedback						: ST_CAN_Object := (Name:='Torque Feedback', 						Index:=16#2044);
+	Velocity_loop_integral_gain			: ST_CAN_Object := (Name:='Velocity loop integral gain', 			Index:=16#2050, 												Default_Value:=5);
+	Velocity_loop_proportional_gain		: ST_CAN_Object := (Name:='Velocity loop proportional gain', 		Index:=16#2051, 												Default_Value:=1);
+	Velocity_loop_torque_limit			: ST_CAN_Object := (Name:='Velocity loop torque limit', 			Index:=16#2053);
+	Velocity_Loop_Advanced_Tuning_Switch: ST_CAN_Object := (Name:='Velocity Loop Advanced Tuning Switch', 	Index:=16#2054,					Length:=2);
+	Velocity_Loop_Target_Bandwidth		: ST_CAN_Object := (Name:='Velocity Loop Target Bandwidth', 		Index:=16#2055);
+	Velocity_Loop_Damping_Ratio			: ST_CAN_Object := (Name:='Velocity Loop Damping Ratio', 			Index:=16#2056);
+	Homing_Velocity_Invert				: ST_CAN_Object := (Name:='Homing Velocity Invert', 				Index:=16#2060,					Length:=2);
+	Homing_Time_Out						: ST_CAN_Object := (Name:='Homing Time Out', 						Index:=16#2061,					Length:=2);
+	Velocity_Following_Error_NrOfObjects: ST_CAN_Object := (Name:='Velocity Following Error_NrOfObjects', 	Index:=16#2064,					Length:=1, 	Default_Value:=2);
+	Velocity_Following_Error_Window		: ST_CAN_Object := (Name:='Velocity Following Error_Window', 		Index:=16#2064,	Subindex:=1,	Length:=2);
+	Velocity_Following_Error_Time_Out	: ST_CAN_Object := (Name:='Velocity Following Error_Time Out', 		Index:=16#2064,	Subindex:=2,	Length:=2);
+	Average_Feedback_Velocity			: ST_CAN_Object := (Name:='Average Feedback Velocity', 				Index:=16#2070);
+	Feedback_Velocity					: ST_CAN_Object := (Name:='Feedback Velocity', 						Index:=16#2071);
+	
+	// Position
+	Encoder_Counts						: ST_CAN_Object := (Name:='Encoder Counts', 						Index:=16#2072);
+	SingleTurn_Position					: ST_CAN_Object := (Name:='SingleTurn Position', 					Index:=16#2073, 	TPDO_Mappable:=TRUE,	Default_Value:=0);
+	MultiTurn_Position					: ST_CAN_Object := (Name:='MultiTurn Position', 					Index:=16#2074, 	TPDO_Mappable:=TRUE,	Default_Value:=0);
+	
+	J_Observer_Curve_Type				: ST_CAN_Object := (Name:='J Observer Curve Type', 					Index:=16#2080,					Length:=1);
+	J_Observer_Cycle_No					: ST_CAN_Object := (Name:='J Observer Cycle No', 					Index:=16#2081,					Length:=1);
+	J_Observer_Max_Speed				: ST_CAN_Object := (Name:='J Observer Max Speed', 					Index:=16#2082,					Length:=2);
+	J_Observer_Max_Speed_Time			: ST_CAN_Object := (Name:='J Observer Max Speed Time', 				Index:=16#2083,					Length:=2);
+	J_Observer_Zero_Speed_Time			: ST_CAN_Object := (Name:='J Observer Zero Speed Time', 			Index:=16#2084,					Length:=2);
+	J_Observer_Acceleration_Rate		: ST_CAN_Object := (Name:='J Observer Acceleration Rate', 			Index:=16#2085,					Length:=2);
+	J_Observer_Deceleration_Rate		: ST_CAN_Object := (Name:='J Observer Deceleration Rate', 			Index:=16#2086,					Length:=2);
+	J_Observer_Speed_Limit_High			: ST_CAN_Object := (Name:='J Observer Speed Limit High', 			Index:=16#2087,					Length:=2);
+	J_Observer_Speed_Limit_Low			: ST_CAN_Object := (Name:='J Observer Speed Limit Low', 			Index:=16#2088,					Length:=2);
+	Position_loop_proportional_gain		: ST_CAN_Object := (Name:='Position loop proportional gain', 		Index:=16#20A1,								Default_Value:=25);
+	Home_Position						: ST_CAN_Object := (Name:='Home Position', 							Index:=16#20C0);
+	Total_inertia						: ST_CAN_Object := (Name:='Total inertia', 							Index:=16#2102);
+	Enable_Field_Weakening				: ST_CAN_Object := (Name:='Enable Field Weakening', 				Index:=16#2104,					Length:=2);
+	Invert_feedback_direction			: ST_CAN_Object := (Name:='Invert feedback direction', 				Index:=16#2107,					Length:=2);
+	Field_Weakening_Max					: ST_CAN_Object := (Name:='Field Weakening Max', 					Index:=16#2108);
+	Field_Weakening_Threshold			: ST_CAN_Object := (Name:='Field Weakening Threshold', 				Index:=16#2109);
+	Field_Weakening_Gain				: ST_CAN_Object := (Name:='Field Weakening Gain', 					Index:=16#210A);
+	Drive_operating_mode				: ST_CAN_Object := (Name:='Drive operating mode', 					Index:=16#2140,					Length:=2);
+	
+	// Brake
+	Brake_NrOfObjects					: ST_CAN_Object := (Name:='Brake_NrOfObjects', 						Index:=16#2150,					Length:=1,	Default_Value:=4);
+	Brake_Status						: ST_CAN_Object := (Name:='Brake_Status', 							Index:=16#2150,	Subindex:=1,	Length:=2);
+	Brake_Override						: ST_CAN_Object := (Name:='Brake_Override', 						Index:=16#2150,	Subindex:=2,	Length:=2);
+	Brake_Delay							: ST_CAN_Object := (Name:='Brake_Delay', 							Index:=16#2150,	Subindex:=3);
+	Brake_Fault_Delay					: ST_CAN_Object := (Name:='Brake_Fault Delay', 						Index:=16#2150,	Subindex:=4);
+	
+	Command_Value						: ST_CAN_Object := (Name:='Command Value',							Index:=16#2170, 							Default_Value:=5);
+	
+	// Inputs Outputs
+	Digital_Inputs_NrOfObjects			: ST_CAN_Object := (Name:='Digital Inputs_NrOfObjects',				Index:=16#21C0,					Length:=1, 	Default_Value:=14);
+	Digital_Inputs_Digital_Input_1		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 1',			Index:=16#21C0,	Subindex:=1,	Length:=2);
+	Digital_Inputs_Digital_Input_2		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 2',			Index:=16#21C0,	Subindex:=2,	Length:=2);
+	Digital_Inputs_Digital_Input_3		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 3',			Index:=16#21C0,	Subindex:=3,	Length:=2);
+	Digital_Inputs_Digital_Input_4		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 4',			Index:=16#21C0,	Subindex:=4,	Length:=2);
+	Digital_Inputs_Digital_Input_5		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 5',			Index:=16#21C0,	Subindex:=5,	Length:=2);
+	Digital_Inputs_Digital_Input_6		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 6',			Index:=16#21C0,	Subindex:=6,	Length:=2);
+	Digital_Inputs_Digital_Input_7		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 7',			Index:=16#21C0,	Subindex:=7,	Length:=2);
+	Digital_Inputs_Digital_Input_8		: ST_CAN_Object := (Name:='Digital Inputs_Digital Input 8',			Index:=16#21C0,	Subindex:=8,	Length:=2);
+	Digital_Inputs_Watchdog_Input		: ST_CAN_Object := (Name:='Digital Inputs_Watchdog Input',			Index:=16#21C0,	Subindex:=9,	Length:=2);
+	Digital_Inputs_Watchdog_Control		: ST_CAN_Object := (Name:='Digital Inputs_Watchdog Control',		Index:=16#21C0,	Subindex:=10,	Length:=2);
+	Digital_Inputs_Watchdog_Fault		: ST_CAN_Object := (Name:='Digital Inputs_Watchdog Fault',			Index:=16#21C0,	Subindex:=11,	Length:=2);
+	Digital_Inputs_PWM_enabled			: ST_CAN_Object := (Name:='Digital Inputs_PWM enabled',				Index:=16#21C0,	Subindex:=12,	Length:=2);
+	Digital_Inputs_STO_L				: ST_CAN_Object := (Name:='Digital Inputs_STO_L',					Index:=16#21C0,	Subindex:=13,	Length:=2);
+	Digital_Inputs_HW_ID				: ST_CAN_Object := (Name:='Digital Inputs_HW ID',					Index:=16#21C0,	Subindex:=14,	Length:=2);
+	Digital_Outputs_NrOfObjects			: ST_CAN_Object := (Name:='Digital Outputs_NrOfObjects',			Index:=16#21C1,					Length:=1,						Default_Value:=3);
+	Digital_Outputs_Digital_Output_1	: ST_CAN_Object := (Name:='Digital Outputs_Digital Output 1',		Index:=16#21C1,	Subindex:=1,	Length:=2);
+	Digital_Outputs_Digital_Output_2	: ST_CAN_Object := (Name:='Digital Outputs_Digital Output 2',		Index:=16#21C1,	Subindex:=2,	Length:=2);
+	Digital_Outputs_Digital_Output_3	: ST_CAN_Object := (Name:='Digital Outputs_Digital Output 3',		Index:=16#21C1,	Subindex:=3,	Length:=2);
+	Analog_Inputs_NrOfObjects			: ST_CAN_Object := (Name:='Analog Inputs_NrOfObjects',				Index:=16#21C2,					Length:=1,						Default_Value:=2);
+	Analog_Inputs_Analog_In_1			: ST_CAN_Object := (Name:='Analog Inputs_Analog In 1',				Index:=16#21C2,	Subindex:=1,	Length:=2);
+	Analog_Inputs_Analog_In_2			: ST_CAN_Object := (Name:='Analog Inputs_Analog In 2',				Index:=16#21C2,	Subindex:=2,	Length:=2);
+	
+	// Temperature
+	Drive_temperature					: ST_CAN_Object := (Name:='Drive temperature', 						Index:=16#2200,					Length:=2);
+	Motor_temperature					: ST_CAN_Object := (Name:='Motor temperature', 						Index:=16#2202,					Length:=2);
+	
+	// HEM Reset
+	BiSS_Encoder_Reset					: ST_CAN_Object := (Name:='BiSS Encoder Reset', 					Index:=16#3502,					Length:=1);
+	
+	// Time
+	Time_since_power_on					: ST_CAN_Object := (Name:='Time since power on', 					Index:=16#4008);
+	
+	// CAN parameters
+	CAN_open_Settings_NrOfObjects		: ST_CAN_Object := (Name:='CAN open Settings_NrOfObjects', 			Index:=16#400A,					Length:=1, 						Default_Value:=2);
+	CAN_open_Settings_Node_Id			: ST_CAN_Object := (Name:='CAN open Settings_Node Id', 				Index:=16#400A,	Subindex:=1,	Length:=1,	RPDO_Mappable:=TRUE,Default_Value:=2);
+	CAN_open_Settings_Baud_rate			: ST_CAN_Object := (Name:='CAN open Settings_Baud rate', 			Index:=16#400A,	Subindex:=2,	Length:=1,	RPDO_Mappable:=TRUE,Default_Value:=0);
+	
+	// Reset
+	Reset								: ST_CAN_Object := (Name:='Reset', 									Index:=16#400B,					Length:=2);
+	
+	// Error, warning, message
+	Error_Warning_status_NrOfObjects					: ST_CAN_Object := (Name:='Error Warning status_NrOfObjects', 						Index:=16#4080,					Length:=1, Default_Value:=2);
+	Error_Warning_status_Error_count					: ST_CAN_Object := (Name:='Error Warning status_Error count', 						Index:=16#4080,	Subindex:=1);
+	Error_Warning_status_Warning_count					: ST_CAN_Object := (Name:='Error Warning status_Warning count', 					Index:=16#4080,	Subindex:=2);
+	Message_History_NrOfObjects							: ST_CAN_Object := (Name:='Message History_NrOfObjects', 							Index:=16#4081,					Length:=1, Default_Value:=6);
+	Message_History_Rx_Last_address						: ST_CAN_Object := (Name:='Message History_Rx Last address', 						Index:=16#4081,	Subindex:=1);
+	Message_History_Rx_Last_message_data				: ST_CAN_Object := (Name:='Message History_Rx Last message data', 					Index:=16#4081,	Subindex:=2);
+	Message_History_Rx_2nd_Last_address					: ST_CAN_Object := (Name:='Message History_Rx 2nd Last address', 					Index:=16#4081,	Subindex:=3);
+	Message_History_Rx_2nd_Last_message_data			: ST_CAN_Object := (Name:='Message History_Rx 2nd Last message data',				Index:=16#4081,	Subindex:=4);
+	Message_History_Rx_3rd_Last_address					: ST_CAN_Object := (Name:='Message History_Rx 3rd Last address', 					Index:=16#4081,	Subindex:=5);
+	Message_History_Rx_3rd_Last_message_data			: ST_CAN_Object := (Name:='Message History_Rx 3rd Last message data',				Index:=16#4081,	Subindex:=6);
+	Error_history_device_time_NrOfObjects				: ST_CAN_Object := (Name:='Error history device time_NrOfObjects',					Index:=16#4082,					Length:=1, Default_Value:=4);
+	Error_history_device_time_Field_1					: ST_CAN_Object := (Name:='Error history device time_Field 1', 						Index:=16#4082,	Subindex:=1);
+	Error_history_device_time_Field_2					: ST_CAN_Object := (Name:='Error history device time_Field 2', 						Index:=16#4082,	Subindex:=2);
+	Error_history_device_time_Field_3					: ST_CAN_Object := (Name:='Error history device time_Field 3', 						Index:=16#4082,	Subindex:=3);
+	Error_history_device_time_Field_4					: ST_CAN_Object := (Name:='Error history device time_Field 4', 						Index:=16#4082,	Subindex:=4);
+	Manufacturer_Error_Message_and_Code_NrOfObjects		: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_NrOfObjects', 		Index:=16#4083,					Length:=1, Default_Value:=8);
+	Manufacturer_Error_Message_and_Code_Field_1_Message	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 1 Message', 	Index:=16#4083,	Subindex:=1);
+	Manufacturer_Error_Message_and_Code_Field_1_Code	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 1 Code', 		Index:=16#4083,	Subindex:=2,	Length:=2);
+	Manufacturer_Error_Message_and_Code_Field_2_Message	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 2 Message', 	Index:=16#4083,	Subindex:=3);
+	Manufacturer_Error_Message_and_Code_Field_2_Code	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 2 Code', 		Index:=16#4083,	Subindex:=4,	Length:=2);
+	Manufacturer_Error_Message_and_Code_Field_3_Message	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 3 Message', 	Index:=16#4083,	Subindex:=5);
+	Manufacturer_Error_Message_and_Code_Field_3_Code	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 3 Code', 		Index:=16#4083,	Subindex:=6,	Length:=2);
+	Manufacturer_Error_Message_and_Code_Field_4_Message	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 4 Message', 	Index:=16#4083,	Subindex:=7);
+	Manufacturer_Error_Message_and_Code_Field_4_Code	: ST_CAN_Object := (Name:='Manufacturer Error Message and Code_Field 4 Code', 		Index:=16#4083,	Subindex:=8,	Length:=2);
+	Warning_Code_NrOfObjects							: ST_CAN_Object := (Name:='Warning Code_NrOfObjects', 								Index:=16#408A, 				Length:=1, Default_Value:=4);
+	Warning_Code_Field_1								: ST_CAN_Object := (Name:='Warning Code_Field 1', 									Index:=16#408A,	Subindex:=1, 	Length:=2);
+	Warning_Code_Field_2								: ST_CAN_Object := (Name:='Warning Code_Field 2', 									Index:=16#408A,	Subindex:=2, 	Length:=2);
+	Warning_Code_Field_3								: ST_CAN_Object := (Name:='Warning Code_Field 3', 									Index:=16#408A,	Subindex:=3, 	Length:=2);
+	Warning_Code_Field_4								: ST_CAN_Object := (Name:='Warning Code_Field 4', 									Index:=16#408A,	Subindex:=4, 	Length:=2);
+	Warning_history_device_time_NrOfObjects				: ST_CAN_Object := (Name:='Warning history device time_NrOfObjects', 				Index:=16#408B, 				Length:=1, Default_Value:=4);
+	Warning_history_device_time_Field_1					: ST_CAN_Object := (Name:='Warning history device time_Field 1', 					Index:=16#408B,	Subindex:=1);
+	Warning_history_device_time_Field_2					: ST_CAN_Object := (Name:='Warning history device time_Field 2', 					Index:=16#408B,	Subindex:=2);
+	Warning_history_device_time_Field_3					: ST_CAN_Object := (Name:='Warning history device time_Field 3', 					Index:=16#408B,	Subindex:=3);
+	Warning_history_device_time_Field_4					: ST_CAN_Object := (Name:='Warning history device time_Field 4', 					Index:=16#408B,	Subindex:=4);
+	Errors_Warnings_Version								: ST_CAN_Object := (Name:='Errors/Warnings Version', 								Index:=16#40BF, 				Length:=2);
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="DWORD_TO_BYTE_ARRAY" Id="{b245e009-a893-41c5-9455-bbd9fe187153}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION DWORD_TO_BYTE_ARRAY
+VAR_INPUT
+	Value	: DWORD;
+END_VAR
+VAR_IN_OUT
+	DATA	: ARRAY [*] OF BYTE;
+END_VAR
+VAR
+	i		: BYTE := 0;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FOR i := 0 TO 3 DO
+	DATA[i] := DWORD_TO_BYTE(SHR(Value, (8*i)));			
+END_FOR;]]></ST>
+    </Implementation>
+    <LineIds Name="DWORD_TO_BYTE_ARRAY">
+      <LineId Id="13" Count="1" />
+      <LineId Id="7" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

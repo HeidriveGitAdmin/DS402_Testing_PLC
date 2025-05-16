@@ -3,7 +3,6 @@
   <POU Name="Encoder_Alignment" Id="{fffc2c42-72de-4382-ac9e-13e5655c61af}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK Encoder_Alignment
 VAR_INPUT
-	NodeID			: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
 	Start 			: BOOL;
 	Current_State 	: E_Statemachine_State;	
 	Statusword		: WORD;	
@@ -91,8 +90,8 @@ CASE Index OF
 		WriteData[2] := 16#76;	// v
 		WriteData[3] := 16#65;	// e		
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#1010,
 			CO_SubIndex		:= 16#04,
 			DataLength		:= 4,
@@ -122,8 +121,8 @@ CASE Index OF
 	9: // Read the alignment offset
 		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#11,
 			DataLength		:= 2,

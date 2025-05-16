@@ -38,8 +38,8 @@ CASE Index OF
 		IF Start THEN		
 			Finished := FALSE;
 			SDO_READ(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#01,
 				DataLength		:= 4,
@@ -57,8 +57,8 @@ CASE Index OF
 	
 	2: // Start reading Min_v
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#03,
 			DataLength		:= 4,
@@ -75,8 +75,8 @@ CASE Index OF
 		
 	4: // Start reading Max_v
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#04,
 			DataLength		:= 4,
@@ -93,8 +93,8 @@ CASE Index OF
 		
 	6: // Start reading Motor_rated_current
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#05,
 			DataLength		:= 4,
@@ -111,8 +111,8 @@ CASE Index OF
 		
 	8: // Start reading Drive_rated_current
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#06,
 			DataLength		:= 4,
@@ -129,8 +129,8 @@ CASE Index OF
 		
 	10: // Start reading Max_current
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#07,
 			DataLength		:= 4,
@@ -147,8 +147,8 @@ CASE Index OF
 		
 	12: // Start reading Motor_rated_torque
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#08,
 			DataLength		:= 4,
@@ -165,8 +165,8 @@ CASE Index OF
 		
 	14: // Start reading Max_torque
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#09,
 			DataLength		:= 2,
@@ -183,8 +183,8 @@ CASE Index OF
 		
 	16: // Start reading Motor_rated_speed
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#0A,
 			DataLength		:= 4,
@@ -201,8 +201,8 @@ CASE Index OF
 		
 	18: // Start reading Number_of_pole_pairs
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#0B,
 			DataLength		:= 2,
@@ -219,8 +219,8 @@ CASE Index OF
 		
 	20: // Start reading Motor_torque_constant
 		SDO_READ_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0C,
 				StartReading	:= TRUE	
@@ -236,8 +236,8 @@ CASE Index OF
 		
 	22: // Start reading Flux_producing_P_gain
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#0D,
 			StartReading	:= TRUE	
@@ -253,8 +253,8 @@ CASE Index OF
 		
 	24: // Start reading Flux_producing_I_gain
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#0E,
 			StartReading	:= TRUE	
@@ -270,8 +270,8 @@ CASE Index OF
 		
 	26: // Start reading Torque_producing_P_gain
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#0F,
 			StartReading	:= TRUE	
@@ -287,8 +287,8 @@ CASE Index OF
 		
 	28: // Start reading Torque_producing_I_gain
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#10,
 			StartReading	:= TRUE	
@@ -304,8 +304,8 @@ CASE Index OF
 		
 	30: // Start reading Magnetic_encoder_offset
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#11,
 			DataLength		:= 2,
@@ -322,8 +322,8 @@ CASE Index OF
 		
 	32: // Start reading Motor_with_brake
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#12,
 			DataLength		:= 2,
@@ -340,8 +340,8 @@ CASE Index OF
 		
 	34: // Start reading Encoder_mode_adjust
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#13,
 			DataLength		:= 2,
@@ -358,8 +358,8 @@ CASE Index OF
 		
 	36: // Start reading Motor_max_speed
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#14,
 			DataLength		:= 2,
@@ -376,8 +376,8 @@ CASE Index OF
 		
 	38: // Start reading Rotor_inertia
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#15,
 			StartReading	:= TRUE	
@@ -393,8 +393,8 @@ CASE Index OF
 		
 	40: // Start reading Motor_time_at_peak
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#17,
 			StartReading	:= TRUE	
@@ -410,8 +410,8 @@ CASE Index OF
 		
 	42: // Start reading Drive_time_at_peak
 		SDO_READ_REAL(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#18,
 			StartReading	:= TRUE	
@@ -427,8 +427,8 @@ CASE Index OF
 		
 	44: // Start reading Singleturn_resolution
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#19,
 			DataLength		:= 1,
@@ -445,8 +445,8 @@ CASE Index OF
 		
 	46: // Start reading Multiturn_resolution
 		SDO_READ(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#41C0,
 			CO_SubIndex		:= 16#1A,
 			DataLength		:= 1,

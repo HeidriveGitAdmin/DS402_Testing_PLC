@@ -43,8 +43,8 @@ CASE Index OF
 			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Min_v,16));
 			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Min_v,24));		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#03,
 				DataLength		:= 4,
@@ -62,8 +62,8 @@ CASE Index OF
 			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Max_v,16));
 			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Max_v,24));		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#04,
 				DataLength		:= 4,
@@ -83,8 +83,8 @@ CASE Index OF
 			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Motor_rated_current,16));
 			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Motor_rated_current,24));		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#05,
 				DataLength		:= 4,
@@ -104,8 +104,8 @@ CASE Index OF
 			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Drive_rated_current,16));
 			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Drive_rated_current,24));		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#06,
 				DataLength		:= 4,
@@ -125,8 +125,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#07,
 				DataLength		:= 2,
@@ -146,8 +146,8 @@ CASE Index OF
 			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Motor_rated_torque,16));
 			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Motor_rated_torque,24));		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#08,
 				DataLength		:= 4,
@@ -167,8 +167,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#09,
 				DataLength		:= 2,
@@ -188,8 +188,8 @@ CASE Index OF
 			WriteData[2] := DWORD_TO_BYTE(SHR(Label.Motor_rated_speed,16));
 			WriteData[3] := DWORD_TO_BYTE(SHR(Label.Motor_rated_speed,24));		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0A,
 				DataLength		:= 4,
@@ -209,8 +209,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0B,
 				DataLength		:= 2,
@@ -226,8 +226,8 @@ CASE Index OF
 	9: 
 		IF SDO_WRITE.WriteDataFinished THEN
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0C,
 				WriteData		:= Label.Motor_torque_constant,
@@ -242,8 +242,8 @@ CASE Index OF
 	10: 
 		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0D,
 				WriteData		:= Label.Flux_producing_P_gain,
@@ -258,8 +258,8 @@ CASE Index OF
 	11: 
 		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0E,
 				WriteData		:= Label.Flux_producing_I_gain,
@@ -274,8 +274,8 @@ CASE Index OF
 	12: 
 		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN	
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#0F,
 				WriteData		:= Label.Torque_producing_P_gain,
@@ -290,8 +290,8 @@ CASE Index OF
 	13: 
 		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#10,
 				WriteData		:= Label.Torque_producing_I_gain,
@@ -310,8 +310,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#11,
 				DataLength		:= 2,
@@ -331,8 +331,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#12,
 				DataLength		:= 2,
@@ -352,8 +352,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#13,
 				DataLength		:= 2,
@@ -373,8 +373,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#14,
 				DataLength		:= 2,
@@ -390,8 +390,8 @@ CASE Index OF
 	18: 
 		IF SDO_WRITE.WriteDataFinished THEN
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#15,
 				WriteData		:= Label.Rotor_inertia,
@@ -406,8 +406,8 @@ CASE Index OF
 	19: 
 		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN		
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#17,
 				WriteData		:= Label.Motor_time_at_peak,
@@ -422,8 +422,8 @@ CASE Index OF
 	20: 
 		IF FB_SDO_WRITE_REAL.WriteDataFinished THEN		
 			FB_SDO_WRITE_REAL(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#18,
 				WriteData		:= Label.Drive_time_at_peak,
@@ -442,8 +442,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;			
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#19,
 				DataLength		:= 1,
@@ -463,8 +463,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#41C0,
 				CO_SubIndex		:= 16#1A,
 				DataLength		:= 1,
@@ -484,8 +484,8 @@ CASE Index OF
 			WriteData[2] := 0;
 			WriteData[3] := 0;		
 			SDO_WRITE(	
-				AdsNetID		:= '5.156.6.243.3.1',
-				PortNr			:= 16#1000 + NodeID,
+				AdsNetID		:= GLB.ADSNetID_CAN,
+				PortNr			:= 16#1000 + GLB.NodeID,
 				CO_Index		:= 16#1010,
 				CO_SubIndex		:= 16#4,
 				DataLength		:= 4,

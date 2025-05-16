@@ -4,26 +4,25 @@
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL
 	// Values for RPDOs
-	Controlword 				AT%Q*: WORD := 0;
-	Mode_of_operation 			AT%Q*: E_Mode_of_Operation := 0;
-	Target_velocity		 		AT%Q*: DINT := 0;
-	Profile_velocity			AT%Q*: DINT := 0;
-	Target_position		 		AT%Q*: DINT := 0;
-	Target_torque		 		AT%Q*: INT := 0;
-	vl_target_velocity	 		AT%Q*: INT := 0;
+	Controlword 				AT%Q*: WORD 				:= 0;
+	Mode_of_operation 			AT%Q*: E_Mode_of_Operation 	:= E_Mode_of_Operation.No_mode_active;
+	Target_velocity		 		AT%Q*: DINT 				:= 0;
+	Profile_velocity			AT%Q*: DINT					:= 0;
+	Target_position		 		AT%Q*: DINT					:= 0;
+	Target_torque		 		AT%Q*: INT					:= 0;
+	vl_target_velocity	 		AT%Q*: INT					:= 0;
 	
 		
 	// Values from TPDOs
-	Statusword 					AT%I*: WORD := 0;
-	Mode_of_operation_display	AT%I*: E_Mode_of_Operation := 0;
-	DC_link_circuit_voltage		AT%I*: DWORD := 0;
-	Current_actual_value		AT%I*: INT := 0;
-	Velocity_actual_value 		AT%I*: DINT := 0;
-	Position_actual_value 		AT%I*: DINT := 0;
-	Torque_actual_value 		AT%I*: INT := 0;
-	Drive_temperature			AT%I*: INT := 0;
-	Motor_temperature			AT%I*: INT := 0;
-	
+	Statusword 					AT%I*: WORD					:= 0;
+	Mode_of_operation_display	AT%I*: E_Mode_of_Operation 	:= E_Mode_of_Operation.No_mode_active;
+	DC_link_circuit_voltage		AT%I*: DWORD				:= 0;
+	Current_actual_value		AT%I*: INT					:= 0;
+	Velocity_actual_value 		AT%I*: DINT					:= 0;
+	Position_actual_value 		AT%I*: DINT					:= 0;
+	Torque_actual_value 		AT%I*: INT					:= 0;
+	Drive_temperature			AT%I*: INT					:= 0;
+	Motor_temperature			AT%I*: INT					:= 0;	
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <GVL Name="DS302_Object_List" Id="{32685c9d-b944-4be2-9cdf-2dda819950e0}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	Download_Program_Data_Number_of_entries							: ST_CAN_Object := (Name:='Download Program Data_Number of entries', 							Index:=16#1F50, 			 Length:=1, 	Writable:=FALSE,	Default_Value:=1);
+	Download_Program_Data_Program_Area								: ST_CAN_Object := (Name:='Download Program Data_Program Area', 								Index:=16#1F50, Subindex:=1, Length:=255);
+	Program_Control_Number_of_entries								: ST_CAN_Object := (Name:='Program Control_Number of entries', 									Index:=16#1F51,				 Length:=1, 	Writable:=FALSE,	Default_Value:=1);
+	Program_Control_Program_Control									: ST_CAN_Object := (Name:='Program Control_Program Control', 									Index:=16#1F51, Subindex:=1, Length:=1);
+	Program_Software_Identification_Number_of_entries				: ST_CAN_Object := (Name:='Program Software Identification_Number of entries', 					Index:=16#1F56,				 Length:=1, 	Writable:=FALSE,	Default_Value:=1);
+	Program_Software_Identification_Program_Software_Identification	: ST_CAN_Object := (Name:='Program Software Identification_Program Software Identification', 	Index:=16#1F56, Subindex:=1,			 	Writable:=FALSE);
+	Flash_Status_Identification_Number_of_entries					: ST_CAN_Object := (Name:='Flash Status Identification_Number of entries', 						Index:=16#1F57,				 Length:=1, 	Writable:=FALSE,	Default_Value:=1);
+	Flash_Status_Identification_Flash_Status						: ST_CAN_Object := (Name:='Flash Status Identification_Flash Status', 							Index:=16#1F57, Subindex:=1,			 	Writable:=FALSE);
+	Firmware_Data_Identification_Number_of_entries					: ST_CAN_Object := (Name:='Firmware Data Identification_Number of entries', 					Index:=16#1F5A,				 Length:=1, 	Writable:=FALSE,	Default_Value:=3);
+	Firmware_Data_Identification_Project_Id							: ST_CAN_Object := (Name:='Firmware Data Identification_Project Id', 							Index:=16#1F5A, Subindex:=1, Length:=255);
+	Firmware_Data_Identification_Firmware_Id						: ST_CAN_Object := (Name:='Firmware Data Identification_Firmware Id', 							Index:=16#1F5A, Subindex:=2, Length:=1, 	Writable:=FALSE,	Default_Value:=1);
+	Firmware_Data_Identification_Max_Block_Size						: ST_CAN_Object := (Name:='Firmware Data Identification_Max Block Size', 						Index:=16#1F5A, Subindex:=3, Length:=2, 	Writable:=FALSE,	Default_Value:=256);
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

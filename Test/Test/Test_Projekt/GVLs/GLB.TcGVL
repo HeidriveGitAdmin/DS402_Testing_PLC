@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <GVL Name="GLB" Id="{7cf4333b-9e18-4f76-aafc-2f9adaa22408}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	Logger			: FB_Logger;
+	ADSNetID_CAN	: STRING(23) := '5.156.6.243.3.1';	// ADSNETID of the CAN module
+	NodeID			: BYTE :=2;								// Node ID of the controller	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

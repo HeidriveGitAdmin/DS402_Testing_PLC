@@ -6,7 +6,7 @@ VAR_INPUT
 	Statusword: WORD;
 END_VAR
 VAR_OUTPUT
-	State: E_Statemachine_State := E_Statemachine_State.unknown;
+	State : E_Statemachine_State;
 END_VAR
 VAR_STAT
 	State_State: ARRAY[0..7] OF E_Statemachine_State := [
@@ -45,14 +45,16 @@ END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[FOR i := 0 TO 7 DO
 	IF (Statusword AND State_Mask[i]) = State_Statusword[i] THEN
-		State := State_State[i];
+		State 		:= State_State[i];
+		GET_STATE 	:= State_State[i];
 		EXIT;
-	END_IF	
+	END_IF
 END_FOR
 ]]></ST>
     </Implementation>
     <LineIds Name="GET_STATE">
       <LineId Id="107" Count="1" />
+      <LineId Id="157" Count="0" />
       <LineId Id="113" Count="0" />
       <LineId Id="115" Count="0" />
       <LineId Id="114" Count="0" />

@@ -1,0 +1,717 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="FB_Sequenz_Testing" Id="{54508373-3272-4d80-8bd4-d80740e4ba69}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Sequenz_Testing
+VAR_INPUT	
+	Start			: BOOL 			:= FALSE;			// Start command
+	Sequence_Name	: STRING(50) 	:= '';				// The name of the sequence
+	Logging_active	: BOOL 			:= TRUE;			// The logging is default active. For deactivating set the variable to false.
+END_VAR
+VAR_OUTPUT
+	Busy			: BOOL			:= FALSE;
+	Finished		: BOOL			:= FALSE;			// The sequence is finished.
+	Error			: BOOL			:= FALSE;			// Error during the sequence.
+END_VAR
+VAR_IN_OUT
+	Step_list		: ARRAY [*] OF E_Test_step;	// Array with the sequence of steps
+END_VAR
+VAR
+	Step_index		: DINT			:= 0;				// The current index of test step
+	Step_state		: BYTE			:= 0;				// The internal state of the current test step
+	Counter			: WORD			:= 0;				// Counter variable for internal use
+	
+	Name			: STRING(50)	:= '';				// The current sequence name. The name is saved once by start of the sequence.
+	
+	Data			: ARRAY [0..255] OF BYTE;
+	CAN_Object		: ST_CAN_Object;	
+	SDO_READ		: FB_SDO_READ;
+	SDO_WRITE		: FB_SDO_WRITE;
+	Write_busy		: BOOL 			:= FALSE;			// A writing process is running. After finishing the process the next test step is started
+	Write_sequence	: BOOL			:= FALSE;			// If this Flag is set, the internal step state is increased. Otherwise the test step is finished after the write process.
+	
+	Next_Step_state	: BOOL 			:= FALSE;			// Increase the internal state of the test step
+	Step_Finished	: BOOL 			:= FALSE;			// Switch to the next test step
+	Error_step		: DINT 			:= -1;				// List index of the test state, at which an error is occured
+	
+	Current_Statemachine_state: E_Statemachine_State;	// The current State machine state
+	
+	Timeout_Counter	: INT			:= 0;				// Timeout Counter
+	Timeout_Max		: INT			:= 0;				// Value at which the timeout counter is triggered (x 10 ms)
+
+	Wait_Counter	: INT			:= 0;				// Wait Counter
+	Wait_Step_Finish: BOOL			:= TRUE;			// True: The step is finished after the waiting time. False: The status counter in the step is increased after the waiting time.
+	Wait_Time		: INT			:= 0;				// Value at which the wait counter is triggered (x 10 ms)
+
+	Message			: STRING(60)	:= '';				// This message is send at the end of the FB
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Start / Reset
+IF Start AND NOT Busy THEN
+	Step_index		:= 0;
+	Step_state 		:= 0;	
+	Finished		:= FALSE;
+	Error			:= FALSE;
+	Error_step		:= -1;
+ 	Busy 			:= TRUE;	
+	Name 			:= Sequence_Name;
+	IF Sequence_Name = '' AND Logging_active THEN
+		GLB.Logger(Message:='Start sequence');
+	ELSE
+		GLB.Logger(Message:=CONCAT('Start sequence: ', Sequence_Name)); 
+	END_IF
+END_IF
+
+
+IF Busy THEN
+	// Reached end?
+	IF (Step_index > UPPER_BOUND(Step_list, 1)) OR (Error_step > -1) THEN
+		Busy 		:= FALSE;
+		Finished 	:= TRUE;
+		IF Error_step = -1 AND Logging_active THEN
+			GLB.Logger(Message:='Sequence successful', SaveFlag:=TRUE);
+			Error	:= FALSE;
+		ELSE	
+			GLB.Logger(Message:='Sequence failed', SaveFlag:=TRUE);			
+			Error	:= TRUE;		
+		END_IF
+				
+	ELSE
+		// Get the current state of the State machine
+		Current_Statemachine_state 			:= GET_STATE(PDO.Statusword);
+			
+		// Processing the individual test steps  
+		CASE Step_list[Step_index] OF
+		
+			// **** Change of state machine state *****
+			// Switch directly to state 'Switch on disabled' -> Set Controlword to 0
+			E_Test_step.Switch_on_disabled:
+				CASE Step_state OF
+					0:	// Set Controlword to 0
+						PDO.Controlword			:= E_Statemachine_Transition_Controlword.Switch_on_disabled;
+						Message					:= 'Switch to state Switch on disabled';		
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until state 'Switch on disabled'
+						IF Current_Statemachine_state = E_Statemachine_State.Switch_on_disabled THEN		Step_Finished := TRUE;	END_IF	
+				END_CASE	
+				
+			// Switch directly to state 'Quick stop active' -> Set Controlword to 2		
+			E_Test_step.Quick_stop_active:
+				CASE Step_state OF
+					0:	// Set Controlword to 2
+						PDO.Controlword			:= E_Statemachine_Transition_Controlword.Quick_stop_active;
+						Message					:= 'Switch to state Quick stop active';		
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until state 'Quick stop active'
+						IF Current_Statemachine_state = E_Statemachine_State.Quick_stop_active THEN			Step_Finished := TRUE;	END_IF
+				END_CASE
+													
+			// Switch directly to state 'Ready to switch on' -> Set Controlword to 6		
+			E_Test_step.Ready_to_switch_on:
+				CASE Step_state OF
+					0:	// Set Controlword to 6
+						PDO.Controlword			:= E_Statemachine_Transition_Controlword.Ready_to_switch_on;
+						Message					:= 'Switch to state Ready to switch on';			
+						Next_Step_state			:= TRUE;				
+				
+					1:	// Wait until state 'Ready to switch on'
+						IF Current_Statemachine_state = E_Statemachine_State.Ready_to_switch_on THEN		Step_Finished := TRUE;	END_IF
+				END_CASE
+													
+			// Switch directly to state 'Switched on' -> Set Controlword to 7			
+			E_Test_step.Switched_on:				
+				CASE Step_state OF
+					0:	// Set Controlword to 7
+						PDO.Controlword			:= E_Statemachine_Transition_Controlword.Switched_on;
+						Message					:= 'Switch to state Switched on';				
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until state 'Switched on'
+						IF Current_Statemachine_state = E_Statemachine_State.Switched_on THEN				Step_Finished := TRUE;	END_IF
+				END_CASE
+													
+			// Switch directly to state 'Operation enabled' -> Set Controlword to F		
+			E_Test_step.Operation_enabled:				
+				CASE Step_state OF
+					0:	// Set Controlword to F
+						PDO.Controlword			:= E_Statemachine_Transition_Controlword.Operation_enabled;
+						Message					:= 'Switch to state Operation enabled';			
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until state 'Operation enabled'
+						IF Current_Statemachine_state = E_Statemachine_State.Operation_enabled THEN			Step_Finished := TRUE;	END_IF
+				END_CASE													
+			// ****************************************	
+						
+			// ***** Change of Mode of Operation ******
+			// Set Mode of Operation to 'No mode'
+			E_Test_step.No_Mode:
+				CASE Step_state OF
+					0:
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.No_mode_active;
+						Message					:= 'Set Mode of Operation to "No mode"';		
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'No mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.No_mode_active THEN			Step_Finished := TRUE;	END_IF				
+				END_CASE
+						
+			// Set Mode of Operation to 'Profile Position Mode'
+			E_Test_step.Mode_PPM:
+				CASE Step_state OF
+					0:	
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.Profile_position_mode;
+						Message					:= 'Set Mode of Operation to "Profile Position Mode"';			
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'Profile Position Mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.Profile_position_mode THEN	Step_Finished := TRUE;	END_IF				
+				END_CASE
+								
+			// Set Mode of Operation to 'Velocity Mode'
+			E_Test_step.Mode_VM:
+				CASE Step_state OF
+					0:
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.Velocity_mode;
+						Message					:= 'Set Mode of Operation to "Velocity Mode"';			
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'Velocity Mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.Velocity_mode THEN			Step_Finished := TRUE;	END_IF		
+				END_CASE
+			
+			// Set Mode of Operation to 'Profile Velocity Mode'
+			E_Test_step.Mode_PVM:
+				CASE Step_state OF
+					0:
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.Profile_velocity_mode;
+						Message					:= 'Set Mode of Operation to "Profile Velocity Mode"';			
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'Profile Velocity Mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.Profile_velocity_mode THEN	Step_Finished := TRUE;	END_IF		
+				END_CASE
+										
+			// Set Mode of Operation to 'Profile Torque Mode'
+			E_Test_step.Mode_PTM:
+				CASE Step_state OF
+					0:
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.Profile_torque_mode;
+						Message					:= 'Set Mode of Operation to "Profile Torque Mode"';		
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'Profile Torque Mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.Profile_torque_mode THEN		Step_Finished := TRUE;	END_IF		
+				END_CASE
+				
+			// Set Mode of Operation to 'Homing Mode'
+			E_Test_step.Mode_HM:
+				CASE Step_state OF
+					0:
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.Homing_mode;
+						Message					:= 'Set Mode of Operation to "Homing mode"';
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'Homing Mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.Homing_mode THEN				Step_Finished := TRUE;	END_IF		
+				END_CASE
+										
+			// Set Mode of Operation to 'Interpolated Position Mode'
+			E_Test_step.Mode_IPM:
+				CASE Step_state OF
+					0:
+						PDO.Mode_of_operation	:= E_Mode_of_Operation.Interpolated_position_mode;
+						Message					:= 'Set Mode of Operation to "Interpolated Position Mode"';
+						Next_Step_state			:= TRUE;
+					
+					1:	// Wait until mode 'Interpolated Position Mode'
+						IF PDO.Mode_of_operation_display = E_Mode_of_Operation.Interpolated_position_mode THEN	Step_Finished := TRUE;	END_IF		
+				END_CASE
+			// ****************************************	
+						
+			// ************** Init steps **************	
+			// Set the factor group to use rpm as user-defined velocity unit
+			E_Test_step.Factor_group_rpm:
+				Write_busy := TRUE;
+				CASE Step_state OF
+					0:	// Set ...
+						Write_sequence := TRUE;
+						DWORD_TO_BYTE_ARRAY(4096, Data);			
+						CAN_Object 		:= DS402_Object_List.Velocity_Factor_Numerator;
+						
+					2:	// Set ...
+						Write_sequence := FALSE;					
+						DWORD_TO_BYTE_ARRAY(60, Data);			
+						CAN_Object 		:= DS402_Object_List.Velocity_Factor_Divisor;
+						
+						
+						
+				END_CASE	
+			// ****************************************	
+			
+			// ************ Setting values ************	
+			// Set 'Velocity_window' to value 30
+			E_Test_step.Velocity_window_30rpm:
+				CASE Step_state OF
+					0:
+						DWORD_TO_BYTE_ARRAY(30, Data);			
+						CAN_Object 		:= DS402_Object_List.Velocity_window;
+						Message 		:= 'Set Velocity_window to 30';					
+						Write_busy		:= TRUE;		
+				END_CASE
+			
+			// Set 'Velocity window time' to value 100
+			E_Test_step.Velocity_window_100ms:
+				CASE Step_state OF
+					0:
+						DWORD_TO_BYTE_ARRAY(100, Data);			
+						CAN_Object 		:= DS402_Object_List.Velocity_window_time;
+						Message			:= 'Set Velocity window time to 100';					
+						Write_busy		:= TRUE;
+				END_CASE
+				
+			// Set 'Profile acceleration' to value 1000
+			E_Test_step.Acceleration_1000:
+				CASE Step_state OF
+					0:
+						DWORD_TO_BYTE_ARRAY(1000, Data);			
+						CAN_Object 		:= DS402_Object_List.Profile_acceleration;
+						Message			:= 'Set Profile acceleration to 1000';
+						Write_busy		:= TRUE;	
+				END_CASE
+				
+			// Set 'Profile deceleration' to value 1000			
+			E_Test_step.Deceleration_1000:
+				CASE Step_state OF
+					0:
+						DWORD_TO_BYTE_ARRAY(1000, Data);	
+						CAN_Object 		:= DS402_Object_List.Profile_deceleration; 				
+						Message			:= 'Set Profile deceleration to 1000';
+						Write_busy		:= TRUE;
+				END_CASE
+				
+			// Set 'Profile velocity' to value 1000			
+			E_Test_step.PPM_Velocity_1000:
+				CASE Step_state OF
+					0:
+						DWORD_TO_BYTE_ARRAY(1000, Data);			
+						CAN_Object 		:= DS402_Object_List.Profile_velocity;
+						Message			:= 'Set Profile velocity to 1000';					
+						Write_busy		:= TRUE;	
+				END_CASE
+	
+			// Set 'Target velocity' to value 1000
+			E_Test_step.PVM_Velocity_1000:
+				CASE Step_state OF
+					0:	
+						DWORD_TO_BYTE_ARRAY(1000, Data);			
+						CAN_Object 		:= DS402_Object_List.Target_velocity;
+						Message			:= 'Set Target velocity to 1000';
+						Write_busy		:= TRUE;
+				END_CASE		
+			// ****************************************	
+							
+			// *********** Check conditions ***********
+			// Check if the 'Target reached' bit in statusword is set within 200 ms
+			E_Test_step.Check_Statusword_Target_reached_200ms:
+				Timeout_Max 		:= 20;
+				IF (PDO.Statusword AND E_Statusword_Bits.Target_reached) = E_Statusword_Bits.Target_reached THEN
+					Message			:= 'Target reached bit is set';
+					Step_Finished	:= TRUE;					
+				END_IF	
+			// ****************************************				
+			
+			// ************ Waiting times *************
+			E_Test_step.Wait_10ms:		IF Step_state = 0 THEN	Wait_Time := 1; 	Message := 'Wait Time 10 ms is running';	Next_Step_State:=TRUE; END_IF
+			E_Test_step.Wait_50ms:		IF Step_state = 0 THEN	Wait_Time := 5; 	Message := 'Wait Time 50 ms is running';	Next_Step_State:=TRUE; END_IF
+			E_Test_step.Wait_100ms:		IF Step_state = 0 THEN	Wait_Time := 10; 	Message := 'Wait Time 100 ms is running';	Next_Step_State:=TRUE; END_IF
+			E_Test_step.Wait_250ms:		IF Step_state = 0 THEN	Wait_Time := 25; 	Message := 'Wait Time 250 ms is running';	Next_Step_State:=TRUE; END_IF
+			E_Test_step.Wait_500ms:		IF Step_state = 0 THEN	Wait_Time := 50; 	Message := 'Wait Time 500 ms is running';	Next_Step_State:=TRUE; END_IF
+			E_Test_step.Wait_1000ms:	IF Step_state = 0 THEN	Wait_Time := 100; 	Message := 'Wait Time 1 s is running';		Next_Step_State:=TRUE; END_IF
+			E_Test_step.Wait_2500ms:	IF Step_state = 0 THEN	Wait_Time := 250; 	Message := 'Wait Time 2.5 s is running';	Next_Step_State:=TRUE; END_IF
+			// Feel free to create your own needed wait times :-)
+			// ****************************************		
+						
+			ELSE
+				// unknown steps -> next step
+				Message				:= CONCAT(CONCAT('FB_Start_Testing: ERROR, unknown test step (', DINT_TO_STRING(Step_index)), ')');
+				Step_Finished		:= TRUE;
+	
+		END_CASE
+		
+		// Waiting time. Active, if Wait_Time is greater than 0
+		IF Wait_Time > 0 THEN
+			Wait_Counter			:= Wait_Counter + 1;	
+			IF Wait_Counter >= Wait_Time THEN
+				Message				:= 'Waiting time expired';			
+				IF Wait_Step_Finish THEN 
+					Step_Finished	:= TRUE;
+				ELSE
+					Next_Step_state	:= TRUE;
+				END_IF
+			END_IF
+		END_IF
+		
+		// SDO Write process is running. This generell function is used, if Write_busy is set.
+		IF Write_busy THEN
+			IF Step_state.0 = 0 THEN
+				// Start writing
+				SDO_Write(
+					ADSNetID		:= GLB.ADSNetID_CAN,				
+					PortNr 		 	:= 16#1000 + GLB.NodeID,
+					CO_Index 		:= CAN_Object.Index,
+					CO_SubIndex 	:= CAN_Object.Subindex,
+					DataLength 		:= CAN_Object.Length,
+					WriteData		:= Data,
+					StartWriting	:= TRUE	);
+				Next_Step_state	:= TRUE;								
+			ELSE
+				// Wait for finishing
+				SDO_Write(StartWriting:=FALSE);
+				IF SDO_WRITE.WriteDataFinished THEN
+					Write_busy			:= FALSE;
+					IF SDO_WRITE.Error = 0 THEN									
+						IF Write_sequence THEN
+							Next_step_state	:= TRUE;
+						ELSE						
+							Step_Finished	:= TRUE;
+						END_IF;
+					ELSE
+						Message			:= CONCAT('ERROR: Write failed, Errornumber: ', DWORD_TO_HEXSTR(SDO_WRITE.Error, 8, FALSE));
+						Error_step		:= Step_index;		
+					END_IF	
+					SDO_Write();	
+				END_IF
+			END_IF
+		END_IF
+		
+		// Next Test step
+		IF Step_Finished THEN
+			IF Message = '' THEN Message := 'OK'; END_IF
+			Step_Finished 			:= FALSE;
+			Step_index				:= Step_index + 1;
+			Step_state 				:= 0;
+			Wait_Counter			:= 0;
+			Wait_Time				:= 0;
+			Wait_Step_Finish		:= TRUE;
+			Write_sequence			:= FALSE;
+			Timeout_Counter			:= 0;
+			Timeout_Max 			:= 10;			// Set Timeout to a default value of 10 (= 100 ms)
+			
+		// Next internal state of the test step			
+		ELSIF Next_Step_state THEN
+			Next_Step_state			:= FALSE;
+			Step_state				:= Step_state + 1;
+			Timeout_Counter			:= 0;	
+		
+		// Timeout
+		ELSE
+			IF Timeout_Max > 0 THEN
+				IF Timeout_Counter >= Timeout_Max THEN
+					Message			:= CONCAT(CONCAT('Timeout triggered (', INT_TO_STRING(Timeout_Max * 10)), ' ms)');
+					Error_step		:= Step_index;
+				END_IF
+				Timeout_Counter	:= Timeout_Counter + 1;	
+			END_IF
+		END_IF
+	END_IF
+	
+	
+	// Log message
+	IF Message <> '' AND Logging_active  THEN
+		GLB.Logger(Message:=Message);
+		Message := '';
+	END_IF
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Sequenz_Testing">
+      <LineId Id="172" Count="6" />
+      <LineId Id="809" Count="0" />
+      <LineId Id="982" Count="0" />
+      <LineId Id="806" Count="0" />
+      <LineId Id="815" Count="0" />
+      <LineId Id="812" Count="1" />
+      <LineId Id="805" Count="0" />
+      <LineId Id="179" Count="0" />
+      <LineId Id="810" Count="0" />
+      <LineId Id="791" Count="0" />
+      <LineId Id="181" Count="2" />
+      <LineId Id="811" Count="0" />
+      <LineId Id="765" Count="0" />
+      <LineId Id="767" Count="0" />
+      <LineId Id="789" Count="0" />
+      <LineId Id="786" Count="0" />
+      <LineId Id="785" Count="0" />
+      <LineId Id="849" Count="0" />
+      <LineId Id="788" Count="0" />
+      <LineId Id="769" Count="0" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="186" Count="2" />
+      <LineId Id="900" Count="0" />
+      <LineId Id="190" Count="2" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="193" Count="1" />
+      <LineId Id="988" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="862" Count="0" />
+      <LineId Id="850" Count="0" />
+      <LineId Id="993" Count="1" />
+      <LineId Id="863" Count="2" />
+      <LineId Id="999" Count="0" />
+      <LineId Id="644" Count="1" />
+      <LineId Id="898" Count="0" />
+      <LineId Id="983" Count="0" />
+      <LineId Id="647" Count="0" />
+      <LineId Id="851" Count="0" />
+      <LineId Id="867" Count="0" />
+      <LineId Id="648" Count="0" />
+      <LineId Id="984" Count="0" />
+      <LineId Id="650" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="987" Count="0" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="265" Count="0" />
+      <LineId Id="897" Count="0" />
+      <LineId Id="989" Count="0" />
+      <LineId Id="268" Count="0" />
+      <LineId Id="852" Count="0" />
+      <LineId Id="869" Count="0" />
+      <LineId Id="986" Count="0" />
+      <LineId Id="269" Count="0" />
+      <LineId Id="1000" Count="1" />
+      <LineId Id="273" Count="0" />
+      <LineId Id="277" Count="1" />
+      <LineId Id="1007" Count="0" />
+      <LineId Id="990" Count="0" />
+      <LineId Id="281" Count="0" />
+      <LineId Id="853" Count="0" />
+      <LineId Id="995" Count="1" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="1002" Count="1" />
+      <LineId Id="286" Count="0" />
+      <LineId Id="291" Count="1" />
+      <LineId Id="992" Count="0" />
+      <LineId Id="991" Count="0" />
+      <LineId Id="295" Count="0" />
+      <LineId Id="854" Count="0" />
+      <LineId Id="997" Count="1" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="1004" Count="1" />
+      <LineId Id="303" Count="1" />
+      <LineId Id="320" Count="2" />
+      <LineId Id="894" Count="0" />
+      <LineId Id="1009" Count="0" />
+      <LineId Id="324" Count="1" />
+      <LineId Id="875" Count="0" />
+      <LineId Id="1023" Count="0" />
+      <LineId Id="855" Count="0" />
+      <LineId Id="328" Count="0" />
+      <LineId Id="1036" Count="0" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="333" Count="1" />
+      <LineId Id="1011" Count="0" />
+      <LineId Id="1010" Count="0" />
+      <LineId Id="336" Count="0" />
+      <LineId Id="856" Count="0" />
+      <LineId Id="1024" Count="1" />
+      <LineId Id="339" Count="1" />
+      <LineId Id="1037" Count="0" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="403" Count="0" />
+      <LineId Id="1012" Count="1" />
+      <LineId Id="404" Count="0" />
+      <LineId Id="406" Count="0" />
+      <LineId Id="857" Count="0" />
+      <LineId Id="1026" Count="1" />
+      <LineId Id="409" Count="1" />
+      <LineId Id="1038" Count="0" />
+      <LineId Id="412" Count="0" />
+      <LineId Id="356" Count="0" />
+      <LineId Id="1014" Count="1" />
+      <LineId Id="357" Count="0" />
+      <LineId Id="359" Count="0" />
+      <LineId Id="858" Count="0" />
+      <LineId Id="1028" Count="1" />
+      <LineId Id="362" Count="1" />
+      <LineId Id="1039" Count="0" />
+      <LineId Id="365" Count="0" />
+      <LineId Id="368" Count="0" />
+      <LineId Id="1016" Count="1" />
+      <LineId Id="369" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="859" Count="0" />
+      <LineId Id="1030" Count="1" />
+      <LineId Id="374" Count="1" />
+      <LineId Id="1040" Count="0" />
+      <LineId Id="377" Count="0" />
+      <LineId Id="379" Count="0" />
+      <LineId Id="1018" Count="1" />
+      <LineId Id="381" Count="0" />
+      <LineId Id="383" Count="0" />
+      <LineId Id="860" Count="0" />
+      <LineId Id="1032" Count="1" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="402" Count="0" />
+      <LineId Id="1041" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="392" Count="0" />
+      <LineId Id="1020" Count="1" />
+      <LineId Id="393" Count="0" />
+      <LineId Id="395" Count="0" />
+      <LineId Id="861" Count="0" />
+      <LineId Id="1034" Count="1" />
+      <LineId Id="398" Count="1" />
+      <LineId Id="1122" Count="0" />
+      <LineId Id="484" Count="0" />
+      <LineId Id="490" Count="0" />
+      <LineId Id="1134" Count="0" />
+      <LineId Id="1137" Count="0" />
+      <LineId Id="1135" Count="0" />
+      <LineId Id="1223" Count="0" />
+      <LineId Id="1140" Count="1" />
+      <LineId Id="1224" Count="0" />
+      <LineId Id="1144" Count="1" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1175" Count="0" />
+      <LineId Id="1225" Count="0" />
+      <LineId Id="1176" Count="1" />
+      <LineId Id="1174" Count="0" />
+      <LineId Id="1159" Count="1" />
+      <LineId Id="1192" Count="0" />
+      <LineId Id="1136" Count="0" />
+      <LineId Id="1138" Count="0" />
+      <LineId Id="419" Count="0" />
+      <LineId Id="652" Count="1" />
+      <LineId Id="1045" Count="0" />
+      <LineId Id="654" Count="1" />
+      <LineId Id="663" Count="0" />
+      <LineId Id="745" Count="0" />
+      <LineId Id="664" Count="0" />
+      <LineId Id="1042" Count="0" />
+      <LineId Id="665" Count="0" />
+      <LineId Id="668" Count="1" />
+      <LineId Id="1047" Count="0" />
+      <LineId Id="670" Count="1" />
+      <LineId Id="679" Count="0" />
+      <LineId Id="742" Count="1" />
+      <LineId Id="1043" Count="0" />
+      <LineId Id="666" Count="0" />
+      <LineId Id="596" Count="0" />
+      <LineId Id="494" Count="0" />
+      <LineId Id="1049" Count="0" />
+      <LineId Id="616" Count="0" />
+      <LineId Id="538" Count="0" />
+      <LineId Id="1098" Count="1" />
+      <LineId Id="737" Count="0" />
+      <LineId Id="1044" Count="0" />
+      <LineId Id="524" Count="0" />
+      <LineId Id="597" Count="0" />
+      <LineId Id="539" Count="0" />
+      <LineId Id="1051" Count="0" />
+      <LineId Id="614" Count="0" />
+      <LineId Id="543" Count="0" />
+      <LineId Id="1121" Count="0" />
+      <LineId Id="1105" Count="0" />
+      <LineId Id="735" Count="0" />
+      <LineId Id="582" Count="0" />
+      <LineId Id="615" Count="0" />
+      <LineId Id="636" Count="0" />
+      <LineId Id="583" Count="0" />
+      <LineId Id="1053" Count="0" />
+      <LineId Id="604" Count="0" />
+      <LineId Id="687" Count="0" />
+      <LineId Id="1116" Count="1" />
+      <LineId Id="734" Count="0" />
+      <LineId Id="603" Count="0" />
+      <LineId Id="635" Count="0" />
+      <LineId Id="568" Count="1" />
+      <LineId Id="1070" Count="0" />
+      <LineId Id="610" Count="0" />
+      <LineId Id="1056" Count="0" />
+      <LineId Id="1060" Count="0" />
+      <LineId Id="1065" Count="0" />
+      <LineId Id="736" Count="0" />
+      <LineId Id="567" Count="0" />
+      <LineId Id="491" Count="0" />
+      <LineId Id="482" Count="0" />
+      <LineId Id="638" Count="0" />
+      <LineId Id="728" Count="0" />
+      <LineId Id="842" Count="1" />
+      <LineId Id="833" Count="0" />
+      <LineId Id="844" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="845" Count="0" />
+      <LineId Id="642" Count="0" />
+      <LineId Id="640" Count="0" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="423" Count="0" />
+      <LineId Id="465" Count="0" />
+      <LineId Id="470" Count="0" />
+      <LineId Id="469" Count="0" />
+      <LineId Id="471" Count="2" />
+      <LineId Id="1124" Count="0" />
+      <LineId Id="421" Count="0" />
+      <LineId Id="417" Count="0" />
+      <LineId Id="219" Count="6" />
+      <LineId Id="444" Count="0" />
+      <LineId Id="440" Count="2" />
+      <LineId Id="775" Count="0" />
+      <LineId Id="443" Count="0" />
+      <LineId Id="447" Count="1" />
+      <LineId Id="450" Count="0" />
+      <LineId Id="449" Count="0" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="446" Count="0" />
+      <LineId Id="631" Count="0" />
+      <LineId Id="598" Count="1" />
+      <LineId Id="1081" Count="0" />
+      <LineId Id="1206" Count="0" />
+      <LineId Id="1073" Count="6" />
+      <LineId Id="1072" Count="0" />
+      <LineId Id="1127" Count="0" />
+      <LineId Id="1083" Count="0" />
+      <LineId Id="1207" Count="0" />
+      <LineId Id="1209" Count="4" />
+      <LineId Id="1222" Count="0" />
+      <LineId Id="1220" Count="0" />
+      <LineId Id="1219" Count="0" />
+      <LineId Id="1221" Count="0" />
+      <LineId Id="1214" Count="4" />
+      <LineId Id="621" Count="0" />
+      <LineId Id="1084" Count="0" />
+      <LineId Id="601" Count="0" />
+      <LineId Id="455" Count="2" />
+      <LineId Id="754" Count="0" />
+      <LineId Id="458" Count="2" />
+      <LineId Id="476" Count="1" />
+      <LineId Id="461" Count="0" />
+      <LineId Id="1205" Count="0" />
+      <LineId Id="462" Count="0" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="463" Count="0" />
+      <LineId Id="241" Count="1" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="438" Count="0" />
+      <LineId Id="431" Count="0" />
+      <LineId Id="253" Count="0" />
+      <LineId Id="439" Count="0" />
+      <LineId Id="258" Count="0" />
+      <LineId Id="757" Count="0" />
+      <LineId Id="259" Count="1" />
+      <LineId Id="727" Count="0" />
+      <LineId Id="430" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="764" Count="0" />
+      <LineId Id="774" Count="0" />
+      <LineId Id="763" Count="0" />
+      <LineId Id="761" Count="0" />
+      <LineId Id="758" Count="2" />
+      <LineId Id="762" Count="0" />
+      <LineId Id="792" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

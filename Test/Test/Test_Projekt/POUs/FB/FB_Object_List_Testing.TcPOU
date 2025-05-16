@@ -1,0 +1,191 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="FB_Object_List_Testing" Id="{ca66eaee-c343-4caa-95ba-6a980cd0d9b1}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Object_List_Testing
+VAR_INPUT
+	Start			: BOOL;	
+	Complete_test	: BOOL := FALSE;	
+	RPDO_Nr			: BYTE := 0;
+	TPDO_Nr			: BYTE := 0;
+END_VAR
+VAR_IN_OUT
+	Object_List		: ARRAY [*] OF ST_CAN_Object;
+END_VAR
+VAR_OUTPUT
+	Finished		: BOOL := FALSE;
+	Error			: BOOL := FALSE;
+END_VAR
+VAR
+	State			: INT := 0;	
+	Index 			: BYTE := 0;
+	i 				: DINT := 0;
+	
+	Object_Testing	: FB_Object_Testing;
+
+	SubIndex_Count	: BYTE := 0;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Start AND State = 255 THEN 
+	Finished 	:= FALSE;
+	Error 		:= FALSE;
+	State 		:= 0;
+END_IF
+
+
+CASE State OF	
+	0:	// Start check objects	
+	IF Start THEN
+		Object_Testing(CAN_Object:=Object_List[0], Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=3, TPDO_Nr:=3);
+		Index := 0;
+		
+		State := State + 1;
+	END_IF
+	
+	
+	1:	// Running, wait for finish and start next object
+	Object_Testing(CAN_Object:=Object_List[Index], Start:=FALSE);
+	
+	IF Object_Testing.Finished THEN
+		
+		CASE Object_List[Index].SubElements OF
+			E_SubElement_types.With_fix_subelements:	// Object with fix subelements
+				IF (Object_List[Index].Readable) AND ((Object_List[Index].Read_Value > 0) OR (Object_List[Index +1].Mandatory > 0)) THEN
+					Index := Index + 1;
+				ELSE
+					Index := Index + 1 + DWORD_TO_BYTE(Object_List[Index].Default_Value);
+				END_IF	 						
+				
+								
+			E_SubElement_types.Fix_subelement:	// Next object
+				Index := Index + 1;		
+					
+	
+			E_SubElement_types.With_list:		// Object with a variable count of subelements	
+				IF Object_List[Index].Readable AND Object_List[Index].Read_Value > 0 THEN
+					Index := Index + 1;						
+					Object_List[Index].Subindex := 1;
+				ELSE
+					Index := Index + 2;
+				END_IF
+
+
+			E_SubElement_types.List_element:	// Next variable subobject or next object
+				IF Object_List[Index - 1].Read_Value > Object_List[Index].Subindex  THEN
+					Object_List[Index].Subindex := Object_List[Index].Subindex + 1;
+				ELSE
+					Index := Index + 1;	
+				END_IF
+			
+			
+			E_SubElement_types.No:	// Standalone object -> next object
+				Index := Index + 1;
+					
+	
+			ELSE					// Unknown Type -> next object
+				Index := Index + 1;
+						
+		END_CASE
+		
+		// Test next Object
+		IF Index <= UPPER_BOUND(Object_List,1) THEN 
+			Object_Testing(CAN_Object:=Object_List[Index], Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=3, TPDO_Nr:=3);	
+		ELSE			
+			State := 254;
+		END_IF		
+	END_IF	
+	
+	
+	// ************ Finished ************			
+	254: // Check error 
+		Error := FALSE;
+		FOR i := 0 TO UPPER_BOUND(Object_List,1) DO
+			Error := Error OR Object_List[i].Error;			
+		END_FOR;
+		Finished := TRUE;	
+		State := 255;
+		
+	255: // Tests finished
+		Finished := TRUE;
+	
+
+	ELSE		
+		State := 254;
+		
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Object_List_Testing">
+      <LineId Id="19" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="167" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="114" Count="1" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="117" Count="1" />
+      <LineId Id="182" Count="0" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="190" Count="2" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="124" Count="1" />
+      <LineId Id="183" Count="0" />
+      <LineId Id="185" Count="1" />
+      <LineId Id="184" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="99" Count="1" />
+      <LineId Id="188" Count="0" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="94" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="175" Count="0" />
+      <LineId Id="227" Count="1" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="235" Count="0" />
+      <LineId Id="233" Count="1" />
+      <LineId Id="232" Count="0" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="236" Count="3" />
+      <LineId Id="162" Count="0" />
+      <LineId Id="31" Count="1" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="29" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

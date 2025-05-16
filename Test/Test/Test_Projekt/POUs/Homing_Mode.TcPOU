@@ -76,8 +76,8 @@ CASE Index OF
 		WriteData[2] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_switch,16));
 		WriteData[3] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_switch,24));	
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#6099,
 			CO_SubIndex		:= 16#01,
 			DataLength		:= 4,
@@ -101,8 +101,8 @@ CASE Index OF
 		WriteData[2] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_zero,16));
 		WriteData[3] := DWORD_TO_BYTE(SHR(Homing_parameters.Speed_zero,24));	
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#6099,
 			CO_SubIndex		:= 16#02,
 			DataLength		:= 4,
@@ -126,8 +126,8 @@ CASE Index OF
 		WriteData[2] := DWORD_TO_BYTE(SHR(Homing_parameters.Acceleration,16));
 		WriteData[3] := DWORD_TO_BYTE(SHR(Homing_parameters.Acceleration,24));	
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#609A,
 			CO_SubIndex		:= 16#00,
 			DataLength		:= 4,
@@ -148,8 +148,8 @@ CASE Index OF
 		Controlword := CONTROLWORD_STATE_CHANGE(Current_State, E_Statemachine_State.Switch_on_disabled);	
 		WriteData[0] := Homing_parameters.Homing_mode;
 		SDO_WRITE(	
-			AdsNetID		:= '5.156.6.243.3.1',
-			PortNr			:= 16#1000 + NodeID,
+			AdsNetID		:= GLB.ADSNetID_CAN,
+			PortNr			:= 16#1000 + GLB.NodeID,
 			CO_Index		:= 16#6098,
 			CO_SubIndex		:= 16#00,
 			DataLength		:= 1,

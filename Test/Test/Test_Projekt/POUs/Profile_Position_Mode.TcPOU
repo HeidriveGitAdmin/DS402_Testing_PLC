@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
   <POU Name="Profile_Position_Mode" Id="{1661e037-98c5-41aa-8d8d-de500405694e}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK Profile_Position_Mode
 VAR_INPUT

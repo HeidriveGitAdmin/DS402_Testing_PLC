@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <DUT Name="E_Test_step" Id="{a1325df9-b562-47e7-aab5-4efaa43d41a6}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_Test_step :
+(
+	// Change of state machine state
+	Switch_on_disabled,		// Switch directly to state 'Switch on disabled' -> Set Controlword to 0
+	Quick_stop_active,		// Switch directly to state 'Quick stop active' -> Set Controlword to 2
+	Ready_to_switch_on,		// Switch directly to state 'Ready to switch on' -> Set Controlword to 6
+	Switched_on,			// Switch directly to state 'Switched on' -> Set Controlword to 7
+	Operation_enabled,		// Switch directly to state 'Operation enabled' -> Set Controlword to F
+	
+	// Change of Mode of Operation
+	No_Mode,				// Set Mode of Operation to 'No mode'
+	Mode_PPM,				// Set Mode of Operation to 'Profile Position Mode'
+	Mode_VM,				// Set Mode of Operation to 'Velocity Mode'
+	Mode_PVM,				// Set Mode of Operation to 'Profile Velocity Mode'
+	Mode_PTM,				// Set Mode of Operation to 'Profile Torque Mode'
+	Mode_HM,				// Set Mode of Operation to 'Homing Mode'
+	Mode_IPM,				// Set Mode of Operation to 'Interpolated Position Mode'
+	
+	// Init values
+	Factor_group_rpm,		// Set the factor group to use rpm as user-defined velocity unit
+	
+	// Setting values
+	Velocity_window_30rpm,	// Set 'Velocity_window' to value 30
+	Velocity_window_100ms,	// Set 'Velocity window time' to value 100
+	Acceleration_1000,		// Set 'Profile acceleration' to value 1000
+	Deceleration_1000,		// Set 'Profile deceleration' to value 1000
+	PPM_Velocity_1000,		// Set 'Profile velocity' to value 1000
+	PVM_Velocity_1000,		// Set 'Target velocity' to value 1000
+		
+	// Check conditions
+	Check_Statusword_Target_reached_200ms,	// Check if the Statusword 'Target reached' bit is set within 200 ms 
+	
+	// Waiting times
+	Wait_10ms,				// Wait 10 ms 	(= 1 cycle)
+	Wait_50ms,				// Wait 50 ms 	(= 5 cycle)
+	Wait_100ms,				// Wait 100 ms 	(= 10 cycle)
+	Wait_250ms,				// Wait 250 ms 	(= 25 cycle)
+	Wait_500ms,				// Wait 500 ms 	(= 50 cycle)
+	Wait_1000ms,			// Wait 1 s 	(= 100 cycle)
+	Wait_2500ms				// Wait 2,5 s 	(= 250 cycle)
+		
+) BYTE;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

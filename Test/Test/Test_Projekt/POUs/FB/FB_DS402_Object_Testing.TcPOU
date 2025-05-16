@@ -1,0 +1,836 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="FB_DS402_Object_Testing" Id="{8bcecccf-0172-4904-a369-b9a49f46e69c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_DS402_Object_Testing
+VAR_INPUT
+	Start			: BOOL;
+END_VAR
+VAR_OUTPUT
+	Finished		: BOOL;
+	Error			: BOOL := FALSE;
+END_VAR
+VAR
+	State			: BYTE := 0;
+	Index			: DINT := 0;
+	
+	NMT_WRITE		: FB_NMT_WRITE;
+	
+	SDO_READ		: FB_SDO_READ;
+	ReadData		: ARRAY [0..255] OF BYTE;
+	
+	SDO_WRITE		: FB_SDO_WRITE;
+	WriteData		: ARRAY [0..255] OF BYTE;		
+			
+	RPDO_Nr				: BYTE := 3;	
+	RPDO_Current_Number	: BYTE := 0;
+	RPDO_Current_Mapped	: DWORD := 0;	
+	
+	TPDO_Nr				: BYTE := 3;
+	TPDO_Current_Number	: BYTE := 0;
+	TPDO_Current_Mapped	: DWORD := 0;
+	
+	
+	Object_List_Testing	: FB_Object_List_Testing;
+	
+	
+	Objects_general			: ARRAY [0..11] OF ST_CAN_Object := [DS402_Object_List.Abort_connection_option_code,
+																 DS402_Object_List.Error_code,
+																 DS402_Object_List.Controlword,
+																 DS402_Object_List.Statusword,
+																 DS402_Object_List.Quick_stop_option_code,
+																 DS402_Object_List.Shutdown_option_code,
+																 DS402_Object_List.Disable_operation_option_code,
+																 DS402_Object_List.Halt_option_code,
+																 DS402_Object_List.Fault_reaction_option_code,
+																 DS402_Object_List.Modes_of_operation,
+																 DS402_Object_List.Modes_of_operation_display,
+																 DS402_Object_List.Supported_drive_modes];
+		
+	Objects_Factor_group	: ARRAY [0..25] OF ST_CAN_Object := [DS402_Object_List.Position_encoder_resolution_Highest_sub_index_supported,
+																 DS402_Object_List.Position_encoder_resolution_Encoder_increments,
+																 DS402_Object_List.Position_encoder_resolution_Motor_revolutions,
+																 DS402_Object_List.Velocity_encoder_resolution_Highest_sub_index_supported,
+																 DS402_Object_List.Velocity_encoder_resolution_Encoder_increments,
+																 DS402_Object_List.Velocity_encoder_resolution_Motor_revolutions,
+																 DS402_Object_List.Gear_ratio_Highest_sub_index_supported,
+																 DS402_Object_List.Gear_ratio_Motor_shaft_revolutions,
+																 DS402_Object_List.Gear_ratio_Driving_shaft_revolutions,
+																 DS402_Object_List.Feed_constant_Highest_sub_index_supported,
+																 DS402_Object_List.Feed_constant_Feed,
+																 DS402_Object_List.Feed_constant_Shaft_Revolution,
+																 DS402_Object_List.Velocity_Factor_Highest_sub_index_supported,
+																 DS402_Object_List.Velocity_Factor_Numerator,
+																 DS402_Object_List.Velocity_Factor_Divisor,
+																 DS402_Object_List.Acceleration_Factor_Highest_sub_index_supported,
+																 DS402_Object_List.Acceleration_Factor_Numerator,
+																 DS402_Object_List.Acceleration_Factor_Divisor,
+																 DS402_Object_List.Jerk_factor_Factor_Highest_sub_index_supported,
+																 DS402_Object_List.Jerk_factor_Factor_Numerator,
+																 DS402_Object_List.Jerk_factor_Factor_Divisor,
+																 DS402_Object_List.Polarity,
+																 DS402_Object_List.SI_unit_postion,
+																 DS402_Object_List.SI_unit_velocity,
+																 DS402_Object_List.SI_unit_acceleration,
+																 DS402_Object_List.SI_unit_jerk];
+							
+	Objects_Position_control: ARRAY [0..10] OF ST_CAN_Object := [DS402_Object_List.Position_demand_value,
+															 	 DS402_Object_List.Position_actual_internal_value,
+																 DS402_Object_List.Position_actual_value,
+																 DS402_Object_List.Following_error_window,
+																 DS402_Object_List.Following_error_time_out,
+																 DS402_Object_List.Position_window,
+																 DS402_Object_List.Position_window_time,
+																 DS402_Object_List.Position_option_code,
+																 DS402_Object_List.Following_error_actual_value,
+																 DS402_Object_List.Control_effort,
+																 DS402_Object_List.Position_demand_integral_value];								
+	
+	Objects_PPM				: ARRAY [0..20] OF ST_CAN_Object := [DS402_Object_List.Target_position,
+															 	 DS402_Object_List.Position_range_limit_Highest_sub_index_supported,
+																 DS402_Object_List.Position_range_limit_Min_position_range_limit,
+																 DS402_Object_List.Position_range_limit_Max_position_range_limit,
+																 DS402_Object_List.Software_position_limit_Highest_sub_index_supported,
+																 DS402_Object_List.Software_position_limit_Min_position_limit,
+																 DS402_Object_List.Software_position_limit_Max_position_limit,
+																 DS402_Object_List.Polarity,
+																 DS402_Object_List.Max_profile_velocity,
+																 DS402_Object_List.Profile_velocity,
+																 DS402_Object_List.End_velocity,
+																 DS402_Object_List.Profile_acceleration,
+																 DS402_Object_List.Profile_deceleration,
+																 DS402_Object_List.Quick_stop_deceleration,
+																 DS402_Object_List.Motion_profile_type,
+																 DS402_Object_List.Profile_jerk_use,
+																 DS402_Object_List.Profile_jerk_Highest_sub_index_supported,
+																 DS402_Object_List.Profile_jerk_1,
+																 DS402_Object_List.Max_acceleration,
+																 DS402_Object_List.Max_deceleration];
+
+	Objects_VM				: ARRAY [0..20] OF ST_CAN_Object := [DS402_Object_List.vl_target_velocity,
+															 	 DS402_Object_List.vl_velocity_demand,
+															 	 DS402_Object_List.vl_velocity_actual_value,
+															 	 DS402_Object_List.vl_velocity_min_max_amount_Highest_sub_index_supported,
+															 	 DS402_Object_List.vl_velocity_min_max_amount_vl_velocity_min_amount,
+															 	 DS402_Object_List.vl_velocity_min_max_amount_vl_velocity_max_amount,
+															 	 DS402_Object_List.vl_velocity_acceleration_Highest_sub_index_supported,
+															 	 DS402_Object_List.vl_velocity_acceleration_Delta_speed,
+															 	 DS402_Object_List.vl_velocity_acceleration_Delta_time,
+															 	 DS402_Object_List.vl_velocity_deceleration_Highest_sub_index_supported,
+															 	 DS402_Object_List.vl_velocity_deceleration_Delta_speed,
+															 	 DS402_Object_List.vl_velocity_deceleration_Delta_time,
+															 	 DS402_Object_List.vl_velocity_quick_stop_Highest_sub_index_supported,
+															 	 DS402_Object_List.vl_velocity_quick_stop_Delta_speed,
+															 	 DS402_Object_List.vl_velocity_quick_stop_Delta_time,
+															 	 DS402_Object_List.vl_set_point_factor_Highest_sub_index_supported,
+															 	 DS402_Object_List.vl_set_point_factor_Numerator,
+															 	 DS402_Object_List.vl_set_point_factor_Denominator,
+															 	 DS402_Object_List.vl_dimension_factor_Highest_sub_index_supported,
+															 	 DS402_Object_List.vl_dimension_factor_Numerator,
+															 	 DS402_Object_List.vl_dimension_factor_Denominator];
+
+	Objects_PVM				: ARRAY [0..16] OF ST_CAN_Object := [DS402_Object_List.Velocity_demand_value,
+															 	 DS402_Object_List.Velocity_actual_value,
+																 DS402_Object_List.Velocity_window,
+																 DS402_Object_List.Velocity_window_time,
+																 DS402_Object_List.Velocity_threshold,
+																 DS402_Object_List.Velocity_threshold_time,
+																 DS402_Object_List.Max_profile_velocity,
+																 DS402_Object_List.Max_motor_speed,
+																 DS402_Object_List.Profile_acceleration,
+																 DS402_Object_List.Profile_deceleration,
+																 DS402_Object_List.Quick_stop_deceleration,
+																 DS402_Object_List.Motion_profile_type,
+																 DS402_Object_List.Profile_jerk_Highest_sub_index_supported,
+																 DS402_Object_List.Profile_jerk_1,
+																 DS402_Object_List.Max_acceleration,
+																 DS402_Object_List.Max_deceleration,
+																 DS402_Object_List.Target_velocity];
+	
+	Objects_TM				: ARRAY [0..12] OF ST_CAN_Object := [DS402_Object_List.Target_torque,
+															 	 DS402_Object_List.Max_torque,
+															 	 DS402_Object_List.Max_current,
+															 	 DS402_Object_List.Torque_demand,
+															 	 DS402_Object_List.Motor_rated_current,
+															 	 DS402_Object_List.Motor_rated_torque,
+															 	 DS402_Object_List.Torque_actual_value,
+															 	 DS402_Object_List.Current_actual_value,
+															 	 DS402_Object_List.DC_link_circuit_voltage,
+															 	 DS402_Object_List.Torque_slope,
+															 	 DS402_Object_List.Torque_profile_type,
+															 	 DS402_Object_List.Positive_torque_limit_value,
+															 	 DS402_Object_List.Negative_torque_limit_value];
+	
+	Objects_HM				: ARRAY [0..7] OF ST_CAN_Object :=  [DS402_Object_List.Home_offset,
+															 	 DS402_Object_List.Homing_method,
+															 	 DS402_Object_List.Homing_speeds_Highest_sub_index_supported,
+															 	 DS402_Object_List.Homing_speeds_Speed_during_search_for_switch,
+															 	 DS402_Object_List.Homing_speeds_Speed_during_search_for_zero,
+															 	 DS402_Object_List.Homing_acceleration,
+															 	 DS402_Object_List.Supported_Homing_Methods_Highest_sub_index_supported,
+															 	 DS402_Object_List.Supported_Homing_Methods_Supported_homing_method_1];
+
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Start AND State = 255 THEN 
+	Finished 	:= FALSE;	
+	Error 		:= FALSE;
+	State 		:= 0;
+END_IF
+
+
+SDO_READ(StartReading:=FALSE);
+SDO_WRITE(StartWriting:=FALSE);
+NMT_WRITE(StartWriting:=FALSE);
+Object_List_Testing(Start:=FALSE);
+
+CASE State OF	
+	// ********** Initial steps **********	
+	0: // NMT Set to Preoperational
+		NMT_WRITE(
+			AdsNetID	:= GLB.ADSNetID_CAN,
+			PortNr		:= 16#1000 + GLB.NodeID,
+			ADSSTATE	:= ADSSTATE_RUN, 
+			DEVSTATE	:= 0,
+			StartWriting:=TRUE			
+		);	
+		State := State + 1;	
+					
+	1: // Wait for finished
+		IF NMT_WRITE.WriteDataFinished THEN
+			Index := 0;	
+			State := State + 1;	
+		END_IF
+		
+
+	2:	// RPDO disable
+		WriteData[3] := 16#80;
+		WriteData[2] := 0;			
+		WriteData[1] := RPDO_Nr + 1;
+		WriteData[0] := GLB.NodeID;	
+			
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 	 	:= 16#1400 + RPDO_Nr,
+			CO_SubIndex  	:= 1,
+			DataLength 	 	:= 4,
+			StartWriting 	:= TRUE,
+			WriteData 	 	:= WriteData );	
+		State := State + 1;	
+					
+	3: // Wait for finished
+		IF NMT_WRITE.WriteDataFinished THEN
+			Index := 0;	
+			State := State + 1;	
+		END_IF
+		
+		
+	4:	// RPDO Current Number of mapped objects
+		SDO_READ(
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1600 + RPDO_Nr,
+			CO_SubIndex 	:= 0,
+			DataLength 		:= 1,
+			StartReading	:= TRUE	);	
+		State := State + 1;	
+					
+	5: // Wait for finished
+		IF SDO_READ.ReadDataAvailable THEN
+			RPDO_Current_Number := SDO_READ.ReadData[0];
+			State := State + 1;
+		END_IF
+		
+		
+	6:	// RPDO Number of mapped objects set to 0
+		WriteData[3] := 0;
+		WriteData[2] := 0;			
+		WriteData[1] := 0;
+		WriteData[0] := 0;	
+		
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 	 	:= 16#1600 + RPDO_Nr,
+			CO_SubIndex  	:= 0,
+			DataLength 	 	:= 1,
+			StartWriting 	:= TRUE,
+			WriteData 	 	:= WriteData );	
+		State := State + 1;	
+					
+	7: // Wait for finished
+		IF NMT_WRITE.WriteDataFinished THEN
+			Index := 0;	
+			State := State + 1;	
+		END_IF
+				
+		
+	8:	// RPDO Current mapped object
+		SDO_READ(
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1600 + RPDO_Nr,
+			CO_SubIndex 	:= 1,
+			DataLength 		:= 4,
+			StartReading	:= TRUE	);	
+		State := State + 1;	
+					
+	9: // Wait for finished
+		IF SDO_READ.ReadDataAvailable THEN
+			RPDO_Current_Mapped := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);								
+			State := State + 1;
+		END_IF		
+			
+		
+	10:	// TPDO disable
+		WriteData[3] := 16#80;
+		WriteData[2] := 0;			
+		WriteData[1] := TPDO_Nr;
+		WriteData[0] := GLB.NodeID + 16#80;	
+			
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 	 	:= 16#1800 + TPDO_Nr,
+			CO_SubIndex  	:= 1,
+			DataLength 	 	:= 4,
+			StartWriting 	:= TRUE,
+			WriteData 	 	:= WriteData );
+		State := State + 1;	
+					
+	11: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN
+			State := State + 1;
+		END_IF	
+		
+
+	12:	// TPDO Current Number of mapped objects
+		SDO_READ(
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1A00 + TPDO_Nr,
+			CO_SubIndex 	:= 0,
+			DataLength 		:= 1,
+			StartReading	:= TRUE	);
+		State := State + 1;	
+					
+	13: // Wait for finished
+		IF SDO_READ.ReadDataAvailable THEN
+			TPDO_Current_Number := SDO_READ.ReadData[0];			
+			State := State + 1;
+		END_IF
+		
+		
+	14:	// RPDO Number of mapped objects set to 0
+		WriteData[3] := 0;
+		WriteData[2] := 0;			
+		WriteData[1] := 0;
+		WriteData[0] := 0;	
+		
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 	 	:= 16#1A00 + RPDO_Nr,
+			CO_SubIndex  	:= 0,
+			DataLength 	 	:= 1,
+			StartWriting 	:= TRUE,
+			WriteData 	 	:= WriteData );	
+		State := State + 1;	
+					
+	15: // Wait for finished
+		IF NMT_WRITE.WriteDataFinished THEN
+			Index := 0;	
+			State := State + 1;	
+		END_IF
+					
+
+	16:	// TPDO Current mapped object
+		SDO_READ(
+			ADSNetID		:= GLB.ADSNetID_CAN,				
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1A00 + TPDO_Nr,
+			CO_SubIndex 	:= 1,
+			DataLength 		:= 4,
+			StartReading	:= TRUE	);
+		State := State + 1;	
+					
+	17: // Wait for finished
+		IF SDO_READ.ReadDataAvailable THEN
+			TPDO_Current_Mapped := SHL(BYTE_TO_DWORD(SDO_READ.ReadData[3]),24) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[2]),16) + SHL(BYTE_TO_DWORD(SDO_READ.ReadData[1]),8) + BYTE_TO_DWORD(SDO_READ.ReadData[0]);							
+			State := 32;
+		END_IF		
+		
+		
+		
+	// ********** Test steps **********
+	32:	// General objects
+		Object_List_Testing(Object_List:=Objects_general, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+		State := State + 1;	
+					
+	33: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF	
+		
+		
+	34:	// Factor group objects
+		Object_List_Testing(Object_List:=Objects_Factor_group, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+		State := State + 1;	
+					
+	35: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF			
+		
+		
+	36:	// Position control objects
+		IF ((Objects_general[11].Read_Value AND 16#00C1) > 0) THEN
+			Object_List_Testing(Object_List:=Objects_Position_control, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+			State := State + 1;	
+		ELSE
+			State := State + 2;
+		END_IF	
+					
+	37: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF	
+	
+		
+	38:	// Profile Position Mode objects
+		IF ((Objects_general[11].Read_Value AND 16#0001) > 16#0001) THEN	
+			Object_List_Testing(Object_List:=Objects_PPM, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+			State := State + 1;	
+		ELSE
+			State := State + 2;
+		END_IF	
+			
+	39: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF	
+	
+		
+	40:	// Velocity Mode objects
+		IF ((Objects_general[11].Read_Value AND 16#0002) = 16#0002) THEN 	
+			Object_List_Testing(Object_List:=Objects_VM, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+			State := State + 1;	
+		ELSE
+			State := State + 2;
+		END_IF	
+			
+	41: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF	
+	
+		
+	42:	// Profile Velocity Mode objects
+		IF ((Objects_general[11].Read_Value AND 16#0004) = 16#0004) THEN	
+			Object_List_Testing(Object_List:=Objects_PVM, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+			State := State + 1;		
+		ELSE
+			State := State + 2;
+		END_IF	
+					
+	43: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF	
+			
+		
+	44:	// Torque objects
+		IF ((Objects_general[11].Read_Value AND 16#0008) = 16#0008) THEN 	
+			Object_List_Testing(Object_List:=Objects_TM, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+			State := State + 1;		
+		ELSE
+			State := State + 2;
+		END_IF	
+					
+	45: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := State + 1;
+		END_IF	
+		
+		
+	46:	// Homing Mode objects
+		IF ((Objects_general[11].Read_Value AND 16#0020) = 16#0020) THEN
+			Object_List_Testing(Object_List:=Objects_HM, Start:=TRUE, Complete_test:=TRUE, RPDO_Nr:=RPDO_Nr, TPDO_Nr:=TPDO_Nr);
+			State := State + 1;		
+		ELSE
+			State := 96;
+		END_IF	
+					
+	47: // Wait for finished
+		IF Object_List_Testing.Finished THEN
+			Error := Error OR Object_List_Testing.error;
+			State := 96;
+		END_IF	
+			
+				
+		
+	// ******** Restore values ********	
+	96:	// RPDO Reset mapped object
+		WriteData[0] := DWORD_TO_BYTE(RPDO_Current_Mapped);
+		WriteData[1] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(RPDO_Current_Mapped,24));
+		
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,			
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1600 + TPDO_Nr,
+			CO_SubIndex 	:= 1,
+			DataLength 		:= 4,
+			StartWriting	:= TRUE,
+			WriteData 	 	:= WriteData );
+		State := State + 1;	
+					
+	97: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN		
+			State := State + 1;
+		END_IF		
+			
+		
+	98:	// RPDO Reset Number of mapped objects
+		WriteData[0] := RPDO_Current_Number;
+			
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1600 + RPDO_Nr,
+			CO_SubIndex 	:= 0,
+			DataLength 		:= 1,
+			StartWriting 	:= TRUE,
+			WriteData 	 	:= WriteData );
+		State := State + 1;	
+					
+	99: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN
+			State := State + 1;
+		END_IF			
+
+		
+	100:	// RPDO reactivate
+		WriteData[3] := 0;
+		WriteData[2] := 0;			
+		WriteData[1] := RPDO_Nr + 1;
+		WriteData[0] := GLB.NodeID;	
+	
+		SDO_WRITE(
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
+			CO_Index 	 := 16#1400 + RPDO_Nr,
+			CO_SubIndex  := 1,
+			DataLength 	 := 4,
+			StartWriting := TRUE,
+			WriteData 	 := WriteData );
+		State := State + 1;	
+					
+	101: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN
+			State := State + 1;
+		END_IF	
+		
+		
+	102:	// TPDO Reset mapped object
+		WriteData[0] := DWORD_TO_BYTE(TPDO_Current_Mapped);
+		WriteData[1] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,8));
+		WriteData[2] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,16));
+		WriteData[3] := DWORD_TO_BYTE(SHR(TPDO_Current_Mapped,24));
+		
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,			
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1A00 + TPDO_Nr,
+			CO_SubIndex 	:= 1,
+			DataLength 		:= 4,
+			StartWriting	:= TRUE,
+			WriteData 	 	:= WriteData );
+		State := State + 1;	
+					
+	103: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN
+			State := State + 1;
+		END_IF			
+			
+		
+	104:	// TPDO Reset Number of mapped objects
+		WriteData[0] := TPDO_Current_Number;
+			
+		SDO_WRITE(
+			ADSNetID		:= GLB.ADSNetID_CAN,
+			PortNr 		 	:= 16#1000 + GLB.NodeID,
+			CO_Index 		:= 16#1A00 + RPDO_Nr,
+			CO_SubIndex 	:= 0,
+			DataLength 		:= 1,
+			StartWriting 	:= TRUE,
+			WriteData 	 	:= WriteData );
+		State := State + 1;	
+					
+	105: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN
+			State := State + 1;
+		END_IF			
+
+		
+	106:	// TPDO reactivate
+		WriteData[3] := 0;
+		WriteData[2] := 0;			
+		WriteData[1] := TPDO_Nr;
+		WriteData[0] := GLB.NodeID + 16#80;	
+			
+		SDO_WRITE(
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PortNr 		 := 16#1000 + GLB.NodeID,
+			CO_Index 	 := 16#1400 + RPDO_Nr,
+			CO_SubIndex  := 1,
+			DataLength 	 := 4,
+			StartWriting := TRUE,
+			WriteData 	 := WriteData );
+		State := State + 1;	
+					
+	107: // Wait for finished
+		IF SDO_WRITE.WriteDataFinished THEN
+			State := State + 1;
+		END_IF	
+						
+	
+	108: // NMT Set to operational
+		NMT_WRITE(
+			ADSNetID	:= GLB.ADSNetID_CAN,
+			PORTNr		:= 16#1000 + GLB.NodeID,
+			ADSSTATE	:= ADSSTATE_RUN,
+			DEVSTATE	:= 1,
+			StartWriting:=TRUE );	
+		State := State + 1;	
+					
+	109: // Wait for finished
+		IF NMT_WRITE.WriteDataFinished THEN
+			State := 255;	
+		END_IF
+	
+		
+	// ************ Finished ************		
+	255: // Tests finished
+		Finished := TRUE;	
+	
+
+	ELSE		
+		State := 255;
+			
+END_CASE
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_DS402_Object_Testing">
+      <LineId Id="131" Count="0" />
+      <LineId Id="1803" Count="1" />
+      <LineId Id="133" Count="1" />
+      <LineId Id="1442" Count="0" />
+      <LineId Id="1058" Count="0" />
+      <LineId Id="590" Count="0" />
+      <LineId Id="588" Count="0" />
+      <LineId Id="587" Count="0" />
+      <LineId Id="1101" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="584" Count="0" />
+      <LineId Id="394" Count="8" />
+      <LineId Id="1441" Count="0" />
+      <LineId Id="403" Count="0" />
+      <LineId Id="1443" Count="0" />
+      <LineId Id="600" Count="0" />
+      <LineId Id="404" Count="2" />
+      <LineId Id="723" Count="1" />
+      <LineId Id="762" Count="2" />
+      <LineId Id="761" Count="0" />
+      <LineId Id="765" Count="0" />
+      <LineId Id="725" Count="0" />
+      <LineId Id="727" Count="5" />
+      <LineId Id="1444" Count="6" />
+      <LineId Id="608" Count="0" />
+      <LineId Id="748" Count="1" />
+      <LineId Id="610" Count="0" />
+      <LineId Id="612" Count="5" />
+      <LineId Id="1451" Count="2" />
+      <LineId Id="618" Count="0" />
+      <LineId Id="621" Count="0" />
+      <LineId Id="629" Count="1" />
+      <LineId Id="585" Count="0" />
+      <LineId Id="631" Count="0" />
+      <LineId Id="2025" Count="0" />
+      <LineId Id="2004" Count="0" />
+      <LineId Id="2027" Count="2" />
+      <LineId Id="2026" Count="0" />
+      <LineId Id="2030" Count="0" />
+      <LineId Id="2010" Count="14" />
+      <LineId Id="1976" Count="0" />
+      <LineId Id="1975" Count="0" />
+      <LineId Id="789" Count="6" />
+      <LineId Id="1454" Count="2" />
+      <LineId Id="796" Count="0" />
+      <LineId Id="799" Count="0" />
+      <LineId Id="801" Count="0" />
+      <LineId Id="803" Count="1" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="768" Count="0" />
+      <LineId Id="1998" Count="4" />
+      <LineId Id="769" Count="0" />
+      <LineId Id="775" Count="7" />
+      <LineId Id="1458" Count="1" />
+      <LineId Id="784" Count="2" />
+      <LineId Id="767" Count="0" />
+      <LineId Id="787" Count="0" />
+      <LineId Id="721" Count="0" />
+      <LineId Id="720" Count="0" />
+      <LineId Id="653" Count="6" />
+      <LineId Id="1461" Count="1" />
+      <LineId Id="1460" Count="0" />
+      <LineId Id="662" Count="0" />
+      <LineId Id="664" Count="0" />
+      <LineId Id="666" Count="1" />
+      <LineId Id="2031" Count="23" />
+      <LineId Id="669" Count="8" />
+      <LineId Id="1463" Count="1" />
+      <LineId Id="679" Count="1" />
+      <LineId Id="682" Count="0" />
+      <LineId Id="684" Count="0" />
+      <LineId Id="668" Count="0" />
+      <LineId Id="649" Count="0" />
+      <LineId Id="722" Count="0" />
+      <LineId Id="650" Count="0" />
+      <LineId Id="412" Count="0" />
+      <LineId Id="411" Count="0" />
+      <LineId Id="390" Count="0" />
+      <LineId Id="1513" Count="1" />
+      <LineId Id="1499" Count="0" />
+      <LineId Id="1497" Count="0" />
+      <LineId Id="1793" Count="0" />
+      <LineId Id="1498" Count="0" />
+      <LineId Id="1438" Count="0" />
+      <LineId Id="1496" Count="0" />
+      <LineId Id="1515" Count="0" />
+      <LineId Id="1503" Count="1" />
+      <LineId Id="1518" Count="1" />
+      <LineId Id="1505" Count="1" />
+      <LineId Id="1796" Count="0" />
+      <LineId Id="1507" Count="0" />
+      <LineId Id="1491" Count="0" />
+      <LineId Id="1532" Count="2" />
+      <LineId Id="1590" Count="0" />
+      <LineId Id="1535" Count="1" />
+      <LineId Id="1591" Count="2" />
+      <LineId Id="1537" Count="2" />
+      <LineId Id="1797" Count="0" />
+      <LineId Id="1540" Count="0" />
+      <LineId Id="1501" Count="0" />
+      <LineId Id="1541" Count="2" />
+      <LineId Id="1594" Count="0" />
+      <LineId Id="1544" Count="1" />
+      <LineId Id="1595" Count="1" />
+      <LineId Id="1546" Count="0" />
+      <LineId Id="1597" Count="0" />
+      <LineId Id="1547" Count="1" />
+      <LineId Id="1798" Count="0" />
+      <LineId Id="1549" Count="0" />
+      <LineId Id="1492" Count="0" />
+      <LineId Id="1550" Count="3" />
+      <LineId Id="1601" Count="0" />
+      <LineId Id="1554" Count="0" />
+      <LineId Id="1598" Count="1" />
+      <LineId Id="1555" Count="0" />
+      <LineId Id="1600" Count="0" />
+      <LineId Id="1556" Count="1" />
+      <LineId Id="1799" Count="0" />
+      <LineId Id="1558" Count="0" />
+      <LineId Id="1439" Count="1" />
+      <LineId Id="1562" Count="2" />
+      <LineId Id="1602" Count="0" />
+      <LineId Id="1605" Count="2" />
+      <LineId Id="1565" Count="3" />
+      <LineId Id="1800" Count="0" />
+      <LineId Id="1569" Count="2" />
+      <LineId Id="1580" Count="0" />
+      <LineId Id="1572" Count="1" />
+      <LineId Id="1603" Count="0" />
+      <LineId Id="1608" Count="2" />
+      <LineId Id="1574" Count="3" />
+      <LineId Id="1801" Count="0" />
+      <LineId Id="1578" Count="1" />
+      <LineId Id="387" Count="0" />
+      <LineId Id="1589" Count="0" />
+      <LineId Id="1581" Count="1" />
+      <LineId Id="1604" Count="0" />
+      <LineId Id="1611" Count="2" />
+      <LineId Id="1583" Count="3" />
+      <LineId Id="1802" Count="0" />
+      <LineId Id="1587" Count="1" />
+      <LineId Id="1561" Count="0" />
+      <LineId Id="1559" Count="0" />
+      <LineId Id="293" Count="0" />
+      <LineId Id="960" Count="0" />
+      <LineId Id="943" Count="0" />
+      <LineId Id="989" Count="2" />
+      <LineId Id="986" Count="0" />
+      <LineId Id="992" Count="0" />
+      <LineId Id="987" Count="0" />
+      <LineId Id="945" Count="5" />
+      <LineId Id="988" Count="0" />
+      <LineId Id="1465" Count="1" />
+      <LineId Id="952" Count="0" />
+      <LineId Id="1055" Count="1" />
+      <LineId Id="958" Count="0" />
+      <LineId Id="829" Count="0" />
+      <LineId Id="993" Count="0" />
+      <LineId Id="959" Count="0" />
+      <LineId Id="965" Count="3" />
+      <LineId Id="979" Count="2" />
+      <LineId Id="972" Count="2" />
+      <LineId Id="1467" Count="1" />
+      <LineId Id="976" Count="2" />
+      <LineId Id="830" Count="0" />
+      <LineId Id="837" Count="0" />
+      <LineId Id="864" Count="0" />
+      <LineId Id="922" Count="13" />
+      <LineId Id="1471" Count="1" />
+      <LineId Id="937" Count="2" />
+      <LineId Id="921" Count="0" />
+      <LineId Id="940" Count="1" />
+      <LineId Id="994" Count="13" />
+      <LineId Id="1473" Count="1" />
+      <LineId Id="1054" Count="0" />
+      <LineId Id="1052" Count="1" />
+      <LineId Id="1012" Count="13" />
+      <LineId Id="1475" Count="1" />
+      <LineId Id="1027" Count="19" />
+      <LineId Id="1477" Count="1" />
+      <LineId Id="1048" Count="3" />
+      <LineId Id="919" Count="0" />
+      <LineId Id="806" Count="0" />
+      <LineId Id="257" Count="0" />
+      <LineId Id="324" Count="3" />
+      <LineId Id="332" Count="0" />
+      <LineId Id="361" Count="0" />
+      <LineId Id="1479" Count="1" />
+      <LineId Id="296" Count="1" />
+      <LineId Id="282" Count="0" />
+      <LineId Id="295" Count="0" />
+      <LineId Id="1483" Count="0" />
+      <LineId Id="1490" Count="0" />
+      <LineId Id="1484" Count="0" />
+      <LineId Id="1790" Count="0" />
+      <LineId Id="1486" Count="3" />
+      <LineId Id="256" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
