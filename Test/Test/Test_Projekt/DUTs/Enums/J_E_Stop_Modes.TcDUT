@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="J_E_Stop_Modes" Id="{908aa505-1fc1-43c4-bc8a-6c9389f127f2}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE J_E_Stop_Modes :
+(
+		Switch_On,					//schnell runterrampen -> Switched on
+		Shutdown,					//Disable PS
+		Switch_On_Disabled,			//Disable PS
+		Vel_To_Zero,				//stillstand mit dehmoment 
+		Halt,						//stillstand mit dehmoment -> Weiterdrehen
+		Quick_Stop,					//schnell runterrampen -> Switch on Disabled
+		STO1,						//Disable PS
+		STO2,						//Disable PS
+		Fault						//DISABLE PS
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

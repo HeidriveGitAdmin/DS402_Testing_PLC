@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <POU Name="FB_Logger" Id="{341e73fd-5d65-4fdd-84cf-702779b5f767}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Logger
 VAR_INPUT
-	NetId			: STRING		:= '10.200.20.219.1.1';	
-	FileName		: STRING 		:= 'C:/Users/heigl/Desktop/LogFile.log';
+	NetId			: STRING		:= '10.200.20.88.1.1';	
+	FileName		: STRING 		:= 'C:\LogFile.log';
 	Timeout			: TIME			:= T#100MS;			// Timeout
 
 	Message			: STRING(256)	:= '';				// Write this message with index, timestamp and a new line suffix

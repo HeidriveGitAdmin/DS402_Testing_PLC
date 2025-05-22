@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <POU Name="CONTROLWORD_STATE_CHANGE" Id="{e061c73d-e1b6-4378-816e-f68084458999}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION CONTROLWORD_STATE_CHANGE : WORD
 VAR_INPUT

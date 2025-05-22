@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <GVL Name="PDO" Id="{7415d80c-22cc-4ead-9ee6-88b0b314fcc1}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL
@@ -22,7 +22,8 @@ VAR_GLOBAL
 	Position_actual_value 		AT%I*: DINT					:= 0;
 	Torque_actual_value 		AT%I*: INT					:= 0;
 	Drive_temperature			AT%I*: INT					:= 0;
-	Motor_temperature			AT%I*: INT					:= 0;	
+	Motor_temperature			AT%I*: INT					:= 0;
+	vl_Velocity_actual_value 		AT%I*: INT					:= 0;	
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

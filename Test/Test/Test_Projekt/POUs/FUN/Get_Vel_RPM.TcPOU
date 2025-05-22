@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="Get_Vel_RPM" Id="{23e05a45-c99c-453e-bf0b-883758330c29}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION Get_Vel_RPM : DINT
+VAR_INPUT
+	Increment_Per_Sec : DINT := 0;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Get_Vel_RPM := (Increment_Per_Sec/4096) * 60;]]></ST>
+    </Implementation>
+    <LineIds Name="Get_Vel_RPM">
+      <LineId Id="7" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

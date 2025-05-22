@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <DUT Name="E_Statusword_Bits" Id="{e406abf3-3cb1-4dff-8a75-8b6e0c1a2bab}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 {attribute 'strict'}

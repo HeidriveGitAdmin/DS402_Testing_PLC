@@ -8,7 +8,7 @@
     <WriteProductVersion>true</WriteProductVersion>
     <GenerateTpy>false</GenerateTpy>
     <Name>Test_Projekt</Name>
-    <ProgramVersion>3.1.4023.0</ProgramVersion>
+    <ProgramVersion>3.1.4026.14</ProgramVersion>
     <Application>{36e27bb6-f810-4258-b4a0-bd46e3b97fce}</Application>
     <TypeSystem>{a659d4cd-757a-4e90-bf22-89c0b3d8e3d3}</TypeSystem>
     <Implicit_Task_Info>{57e611ab-5f7a-4139-bdd3-0b231e0885ae}</Implicit_Task_Info>
@@ -48,6 +48,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\Enums\E_SubElement_Types.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Enums\J_E_Stop_Modes.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\Enums\J_E_Test_Ranking.TcDUT">
@@ -138,10 +141,13 @@
     <Compile Include="POUs\FB\FB_Sequenz_Testing.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\FB_Message_Logging.TcPOU">
+    <Compile Include="POUs\FUN\DWORD_TO_BYTE_ARRAY.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\FUN\DWORD_TO_BYTE_ARRAY.TcPOU">
+    <Compile Include="POUs\FUN\Get_Vel_RPM.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\FUN\J_Make_Message.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\Homing_Mode.TcPOU">

@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="J_Make_Message" Id="{fca63597-66d2-4877-b13d-15141e1310bf}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION J_Make_Message : STRING
+VAR_INPUT
+	Operation_Mode : E_Mode_of_operation;
+	Testing_Mode   : J_E_Stop_Modes;
+	Desired_Value  : DINT;
+	Real_Value     : DINT;
+	Ranking 	   : J_E_Test_Ranking;
+	Comment		   : STRING(256);
+END_VAR
+VAR
+	Message : STRING;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Message := CONCAT(Message, TO_STRING(Operation_Mode));
+Message := CONCAT(Message,',');
+//Message := CONCAT(Message,'$T');
+Message := CONCAT(Message, TO_STRING(Testing_Mode));
+Message := CONCAT(Message,',');
+//Message := CONCAT(Message,'$T');
+Message := CONCAT(Message, DINT_TO_STRING(Desired_Value));
+Message := CONCAT(Message,',');
+//Message := CONCAT(Message,'$T');
+Message := CONCAT(Message, DINT_TO_STRING(Real_Value));
+Message := CONCAT(Message,',');
+//Message := CONCAT(Message,'$T');
+Message := CONCAT(Message, TO_STRING(Ranking));
+Message := CONCAT(Message,',');
+//Message := CONCAT(Message,'$T');
+Message := CONCAT(Message, Comment);
+Message := CONCAT(Message,'$n');
+
+GLB.Logger.SaveFlag := TRUE;
+
+J_Make_Message := Message;]]></ST>
+    </Implementation>
+    <LineIds Name="J_Make_Message">
+      <LineId Id="15" Count="15" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="46" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

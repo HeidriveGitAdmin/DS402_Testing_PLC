@@ -1,768 +1,913 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.11">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <POU Name="J_Stop_Testing_SM" Id="{c231d705-6bba-41a2-9ea5-2d7b22a70d02}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK J_Stop_Testing_SM
 VAR_INPUT
 	JST_NodeID					: BYTE; (* This Port No. addresses the CANopen Node (see System Manager) *)
 	JST_Start_Testing			: BOOL; (* Send True to start the Stop Testing*)
-	JST_Statusword				: WORD;	
 	JST_Current_State 			: E_Statemachine_State;
 END_VAR
 VAR_OUTPUT
-	Finished 				: BOOL;
-	JST_Controlword 		: WORD;
-	Mode_of_operation 		: E_Mode_of_operation	:= E_Mode_of_operation.No_mode_active;
+	Finished 					: BOOL := FALSE;
+	JST_Controlword 			: WORD;
+	Mode_of_operation 			: E_Mode_of_operation	:= E_Mode_of_operation.No_mode_active;
 END_VAR
 VAR
 	// Statemachine variables
+	e_Controlword_Send : (Wait_For_Send, Continue_SM) := Continue_SM;
+	
 	JST_Profile_Velocity_Mode 		: Profile_Velocity_Mode;
 	e_Stop_Testing_State_Machine 	: (Idle,
 									   Initialise_Drive,
 									   Check_Start_Drive_Condition,
+									   Change_Stop_Testing_State,
 								       Stop_Testing, 
 									   Check_Stop_Drive_Condition,
 									   Start_Drive, 
-									   Error_Handling) := Idle; 
+									   Error_Handling); 
 									
-	e_Operation_Mode : E_Mode_of_operation := E_Mode_of_operation.Profile_position_mode;
+	e_Operation_Mode : E_Mode_of_operation := E_Mode_of_operation.Velocity_mode;
 	
-	e_Stop_Mode :  (Switch_On,					//schnell runterrampen -> Switched on
+	(* e_Stop_Mode :  (Switch_On,					//schnell runterrampen -> Switched on
 					Shutdown,					//Disable PS
 					Switch_On_Disabled,			//Disable PS
 					Vel_To_Zero,				//Ramp down
 					Halt,						//stillstand mit dehmoment -> Weiterdrehen
 					Quick_Stop,					//schnell runterrampen -> Switch on Disabled
-					Fault,						//DISABLE PS
 					STO1,						//Disable PS
 					STO2,						//Disable PS
-					END) := Switch_On;
-					
+					Fault						//DISABLE PS
+					) := Switch_On; *)
+	
+	e_Stop_Mode : J_E_Stop_Modes := J_E_Stop_Modes.Switch_On;
+	
 	e_Stop_Type :  (Idle_Output_Stage,
 				    Ramp_Down_AFAP,
-					Vel_Zero,
-					Quick_Stop);
+					Vel_Zero);
 					
 	e_Start_Type : (Start_After_Reset,
 					No_Start_After_Reset);
 					
 	
-	JST_Profile_velocity_parameters	: ST_Velocity_parameters := (vl_target_velocity 	  := 1000,
-																 vl_velocity_acceleration := 1000,
-																 vl_velocity_deceleration := 1000);
-	vl_target_velocity	: INT := 0;
-	Target_State: E_STATEMACHINE_STATE;
+	JST_Profile_velocity_parameters	: ST_Profile_velocity_parameters := (Target_velocity 	  := 1000,
+																 		 Profile_acceleration := 1000,
+																 		 Profile_deceleration := 1000);
+																 
+	Target_velocity	: INT := 0;
+	Target_State : E_STATEMACHINE_STATE;
 	
 	SDO_WRITE		: FB_SDO_WRITE;
 	WriteData		: ARRAY [0..255] OF BYTE;
 	
-	//Tolerance valiables
+	//Tolerance variables
 	Time_Tolerance : INT := 20;		//Unit is ms
 	Vel_Tolerance  : INT := 30;		//Assumed that unit is RPM
 	Stop_Tolerance : INT := 5;
 	Stop_Time_AFAP : TIME := T#500MS;
 	
 	// Trash Variables 
-	Temp : BOOL := TRUE;
-	JumpNextState : BOOL := FALSE;
-	Quick_Stop_Activ_Reset : WORD := 10#0000;
-	Mode_Change : BOOL := TRUE;
+	Temp 				         : BOOL := TRUE;
+	JumpNextState 				 : BOOL := FALSE;
+	Quick_Stop_Activ_Reset 		 : WORD := 16#00;
+	Mode_Change 				 : BOOL := TRUE;
+	Temp_msg 					 : STRING; 
+	Delay 						 : BOOL := FALSE;
+	Send_Controlword_Direct 	 : BOOL := FALSE;
+	Quickstop_Change_Controlword : BOOL := TRUE;
 	
 	//Timer variables
 	Toff : TIME := T#2000MS;
-	fbTON : TON := (PT := Toff);
-	Elapsed_Time : TIME;
+	
+	StopTimer			 : TON := (PT := Toff);
+	StartDelayTimer 	 : TON := (PT := Toff);
+	CheckStartDelayTimer : TON := (PT := Toff);
+	
+	Stop_Timer 			: BOOL;
+	Start_Delay_Timer 		: BOOL;
+	Check_Start_Delay_Timer : BOOL;
+	
+	Elapsed_Time 			: TIME;
 	
 	//Message logging variables
-	fb_Message_Logging : FB_Message_Logging;
+	//fb_Message_Logging 		: J_Make_Message;
+	Stop_Mode_String 		: STRING;
 	
 	// 24V Output variables
-	OutputSTO1 	AT%Q* 	: BOOL;
-	OutputSTO2 	AT%Q* 	: BOOL;
-END_VAR
+	OutputSTO1 	AT%Q* 		: BOOL;
+	OutputSTO2 	AT%Q* 		: BOOL;
 
-VAR CONSTANT
-	Start_Timer : BOOL := TRUE;
-	Reset_Timer : BOOL := FALSE;
+	Actual_Velocity_RPM		: DINT;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[e_Operation_Mode := PDO.Mode_of_operation_display;
+      <ST><![CDATA[StopTimer(IN := Stop_Timer);
+StartDelayTimer(IN := Start_Delay_Timer);
+CheckStartDelayTimer(IN := Check_Start_Delay_Timer);
 
-CASE e_Stop_Testing_State_Machine OF
-	
-	Idle:
-		IF JST_Start_Testing THEN
-			e_Stop_Testing_State_Machine := Start_Drive;
-		ELSE
-			e_Stop_Testing_State_Machine := Idle;
-		END_IF
-		
-//_____________________Start Drive SM___________________________________
-	Initialise_Drive:
-		OutputSTO1 := TRUE;
-		OutputSTO2 := TRUE;
-		CASE e_Operation_Mode OF
-			//----------------------------------------------------------
-			e_Operation_Mode.Profile_position_mode:
-				// Vel = 1000 ; Acc = 1000 ; Dec = 1000, Pos = 10000000	
-				IF NOT JST_Profile_Velocity_Mode.Finished THEN
-					//just want to set acc and dec but not enable the drive
-					JST_Profile_Velocity_Mode (NodeID := JST_NodeID,		//PVM just because the param for acc and dec are set and the same as in PPM
-											   Start := TRUE,
-											   Current_State := JST_Current_State,
-											   Statusword := JST_Statusword,
-											   Profile_velocity_parameters := JST_Profile_velocity_parameters,
-											   Controlword => JST_Controlword);
-					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_Statemachine_State.Switch_on_disabled);
+Actual_Velocity_RPM := PDO.vl_Velocity_actual_value;
+//e_Operation_Mode := PDO.Mode_of_operation_display;
+
+CASE e_Controlword_Send OF
+	Continue_SM:		
+		CASE e_Stop_Testing_State_Machine OF
+			
+			Idle:
+				IF JST_Start_Testing THEN
+					e_Stop_Testing_State_Machine := Initialise_Drive;
+					e_Operation_Mode := E_Mode_of_operation.Velocity_mode;
+					Finished := FALSE;
+					GLB.Logger.OpenFlag := TRUE;
 				ELSE
-					PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_position_mode;		
-					PDO.Profile_velocity 	:= JST_Profile_velocity_parameters.vl_target_velocity;
-					PDO.Target_position 	:= 16#1000000;    // need to evaluate a good value 
-					
-					//Profile position FB how to use?
-					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
-					e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+					e_Stop_Testing_State_Machine := Idle;
 				END_IF
-			//----------------------------------------------------------					
-			e_Operation_Mode.Velocity_mode:
-				// Vel = 1000
-				// Start Drive, Wait for SDO written then change state
-				IF Mode_Change THEN
-					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Ready_to_switch_on);
-					Mode_Change := FALSE;
-				ELSE
-					PDO.Mode_of_operation := E_Mode_of_Operation.Velocity_mode;
-					PDO.Target_velocity := JST_Profile_velocity_parameters.vl_target_velocity;
-					JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
-					e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
-				END_IF					
-			//----------------------------------------------------------	
-			e_Operation_Mode.Profile_velocity_mode:
-				// Vel = 1000 ; Acc = 1000 ; Dec = 500
-				// Start Drive, Wait for SDO written then change state
-				IF NOT JST_Profile_Velocity_Mode.Finished THEN
-					JST_Profile_Velocity_Mode (NodeID := JST_NodeID,
-											   Start := TRUE,
-											   Current_State := JST_Current_State,
-											   Statusword := JST_Statusword,
-											   Profile_velocity_parameters := JST_Profile_velocity_parameters,
-											   Controlword => JST_Controlword);
-				ELSE
-					e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
-				END_IF
-			//----------------------------------------------------------	Hier vorm Wochenende stehen geblieben
-			e_Operation_Mode.Profile_torque_mode:
-				// Torque = 100 pro mill
-				// Start Drive, Wait for SDO written then change state
-				e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
-		END_CASE
-		
-		
-//__________________Check Drive Condition SM_____________________________
-	Check_Start_Drive_Condition:
-		// Wait for desired speed 
-		// true change state / false wirte msg log
-		CASE e_Operation_Mode OF
-			//-----------------------------------------------------------
-			e_Operation_Mode.Profile_position_mode, e_Operation_Mode.Velocity_mode, e_Operation_Mode.Profile_velocity_mode:
-				CASE e_Start_Type OF
-					Start_After_Reset:
-						IF ABS(PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity) < Vel_Tolerance 
-						   AND PDO.Statusword = E_Statusword_Bits.Target_reached THEN
-								// e_Stop_Mode muss mitgeloggt werden!!! sonst erkennt man nicht in welchem fall der motor wieder anläuft
-								fb_Message_Logging(Testing_Mode := 'Check_Start_Drive_Condition',
-												   Operation_Mode := e_Operation_Mode,
-												   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity,
-												   Real_Value := PDO.Velocity_actual_value,
-												   Ranking := J_E_Test_Ranking.OK,
-												   Comment := 'Drive started within tolerance');
-								e_Stop_Testing_State_Machine := Stop_Testing;
-								
-						ELSIF PDO.Statusword = E_Statusword_Bits.Fault THEN
-								fb_Message_Logging(Testing_Mode := 'Check_Start_Drive_Condition',
-												   Operation_Mode := e_Operation_Mode,
-												   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity,
-												   Real_Value := PDO.Velocity_actual_value,
-												   Ranking := J_E_Test_Ranking.Not_OK,
-												   Comment := 'Drive started not in tolerance');
-								e_Stop_Testing_State_Machine := Error_Handling; // naja mal schauen
-						ELSE
-								;
+				
+		//_____________________Start Drive SM___________________________________
+			Initialise_Drive:
+				OutputSTO1 := TRUE;
+				OutputSTO2 := TRUE;
+				CASE e_Operation_Mode OF
+					//----------------------------------------------------------
+					E_Mode_of_operation.Profile_position_mode:
+						// Vel = 1000 ; Acc = 1000 ; Dec = 1000, Pos = 10000000						  
+						IF NOT JST_Profile_Velocity_Mode.Finished THEN
+							//just want to set acc and dec but not enable the drive
+							JST_Profile_Velocity_Mode (NodeID := JST_NodeID,		//PVM just because the param for acc and dec are set and the same as in PPM
+													   Start := TRUE,
+													   Current_State := JST_Current_State,
+													   Statusword := PDO.Statusword,
+													   Profile_velocity_parameters := JST_Profile_velocity_parameters,
+													   Controlword => JST_Controlword);
+							e_Controlword_Send := Continue_SM;
+							
+						ELSIF JST_Profile_Velocity_Mode.Finished THEN
+
+							PDO.Mode_of_operation 	:= E_Mode_of_operation.Profile_position_mode;		
+							PDO.Profile_velocity 	:= JST_Profile_velocity_parameters.Target_velocity;
+							PDO.Target_position 	:= 16#1000000;    // need to evaluate a good value 
+							
+							//Profile position FB how to use?
+							Target_State := E_Statemachine_State.Operation_enabled;
+							e_Controlword_Send := Wait_For_Send;
+							e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+							Mode_Change := TRUE;
 						END_IF
-						
-					//---After Quickstop STO stopping the drive is not supposed to run with reset
-					No_Start_After_Reset:
-						IF fbTON.Q THEN
-							IF ABS(PDO.Velocity_actual_value) < Stop_Tolerance THEN
-								fb_Message_Logging(Testing_Mode := 'Check_Start_Drive_Condition',
-												   Operation_Mode := e_Operation_Mode,
-												   Desired_Value := 0,
-												   Real_Value := PDO.Velocity_actual_value,
-												   Ranking := J_E_Test_Ranking.OK,
-												   Comment := 'Its not supposed to start');
-							ELSE
-								fb_Message_Logging(Testing_Mode := 'Check_Start_Drive_Condition',
-												   Operation_Mode := e_Operation_Mode,
-												   Desired_Value := 0,
-												   Real_Value := PDO.Velocity_actual_value,
-												   Ranking := J_E_Test_Ranking.Not_OK,
-												   Comment := 'Its not supposed to start');
+					//----------------------------------------------------------					
+					E_Mode_of_operation.Velocity_mode:
+							// Vel = 1000
+							PDO.Mode_of_operation := E_Mode_of_Operation.Velocity_mode;
+							PDO.vl_target_velocity := TO_INT(JST_Profile_velocity_parameters.Target_velocity);
+							Target_State := E_Statemachine_State.Operation_enabled;
+							e_Controlword_Send := Wait_For_Send;
+							e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+							Check_Start_Delay_Timer := TRUE;	
+		
+					//----------------------------------------------------------	
+					E_Mode_of_operation.Profile_velocity_mode:
+						// Vel = 1000 ; Acc = 1000 ; Dec = 500
+						// Start Drive, Wait for SDO written then change state
+						IF NOT JST_Profile_Velocity_Mode.Finished THEN
+							JST_Profile_Velocity_Mode (NodeID := JST_NodeID,
+													   Start := TRUE,
+													   Current_State := JST_Current_State,
+													   Statusword := JST_Current_State,
+													   Profile_velocity_parameters := JST_Profile_velocity_parameters,
+													   Controlword => JST_Controlword);
+							e_Controlword_Send := Continue_SM;
+							
+						ELSIF JST_Profile_Velocity_Mode.Finished THEN
+							PDO.Profile_velocity := JST_Profile_velocity_parameters.Target_velocity;
+							e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+						END_IF
+					//----------------------------------------------------------
+					E_Mode_of_operation.Profile_torque_mode:
+						Target_State := E_Statemachine_State.Ready_to_switch_on;
+						e_Controlword_Send := Wait_For_Send;
+							IF PDO.Controlword = E_Statusword_Bits.Ready_to_switch_on THEN
+								PDO.Mode_of_operation := E_Mode_of_Operation.Profile_torque_mode;
+								PDO.Target_torque := 100; 	// Asssumed unit is in Promill
+								Target_State := E_Statemachine_State.Operation_enabled;
+								e_Controlword_Send := Wait_For_Send;
+								e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
 							END_IF	
-							e_Operation_Mode := Start_After_Reset;
-						END_IF
-						IF e_Stop_Mode = Quick_Stop +1 THEN  // Reset for quickstop but state already increased
-							JST_Controlword := JST_Controlword AND Quick_Stop_Activ_Reset;
-						ELSIF e_Stop_Mode = STO1 +1 OR e_Stop_Mode = Switch_On THEN // as said one state before
-							JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
-							e_Stop_Testing_State_Machine := Initialise_Drive;
-							e_Operation_Mode := e_Operation_Mode.Velocity_mode; // Jump to next Operation Mode
-						END_IF
-						
 				END_CASE
+				e_Start_Type := Start_After_Reset;
 				
-			e_Operation_Mode.Profile_torque_mode:
-				// check torque
-				// true change state / false wirte msg log
-		END_CASE
-
-//__________________Stop Testing SM______________________________________		
-	Stop_Testing:
+		//__________________Check Drive Condition SM_____________________________
+			Check_Start_Drive_Condition:
+				// Wait for desired speed 
+				IF CheckStartDelayTimer.Q THEN
+					Check_Start_Delay_Timer := FALSE;  // Kann zu problemen führen, da falls der timer gleich resettet wird auch der programmzeiger nichtmehr in die If reinhüpft
+					CASE e_Operation_Mode OF
+						//-----------------------------------------------------------
+						E_Mode_of_operation.Profile_position_mode, E_Mode_of_operation.Velocity_mode, E_Mode_of_operation.Profile_velocity_mode:
+							CASE e_Start_Type OF
+								Start_After_Reset:
+									IF ABS(Actual_Velocity_RPM - JST_Profile_velocity_parameters.Target_velocity) < Vel_Tolerance THEN
+									  // AND PDO.Statusword = E_Statusword_Bits.Target_reached THEN  //hier nochmal nachschauen
+											// e_Stop_Mode muss mitgeloggt werden!!! sonst erkennt man nicht in welchem fall der motor wieder anläuft
+											GLB.Logger.Message := J_Make_Message( Testing_Mode := e_Stop_Mode,
+																					  Operation_Mode := e_Operation_Mode,
+																				      Desired_Value := JST_Profile_velocity_parameters.Target_velocity,
+																				      Real_Value := TO_INT(Actual_Velocity_RPM),
+																				      Ranking := J_E_Test_Ranking.OK,
+																				      Comment := 'Drive started in toleran'); 									   
+											ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+													msgFmtStr := CONCAT('Geschwindigkeit passt  ',TO_STRING(Actual_Velocity_RPM)),
+													strArg := '');
+											e_Stop_Testing_State_Machine := Change_Stop_Testing_State;
+									
+									ELSIF ABS(Actual_Velocity_RPM - JST_Profile_velocity_parameters.Target_velocity) < Vel_Tolerance THEN
+										J_Make_Message(Testing_Mode := e_Stop_Mode,
+														   Operation_Mode := e_Operation_Mode,
+														   Desired_Value := JST_Profile_velocity_parameters.Target_velocity,
+														   Real_Value := TO_INT(Actual_Velocity_RPM),
+														   Ranking := J_E_Test_Ranking.Not_OK,
+														   Comment := 'Drive started not in tolerance');
+										ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+												msgFmtStr := 'Nicht wieder angelaufen zefigs',
+												strArg := '');
+										Target_State := E_Statemachine_State.Switch_on_disabled;
+										e_Controlword_Send := Wait_For_Send;
+										e_Stop_Testing_State_Machine := Start_Drive;
+		
+									ELSIF PDO.Statusword = E_Statusword_Bits.Fault THEN // auch nochmal checken ob das so passt
+										GLB.Logger.Message :=J_Make_Message(Testing_Mode := e_Stop_Mode,
+																		    Operation_Mode := e_Operation_Mode,
+																		    Desired_Value := JST_Profile_velocity_parameters.Target_velocity,
+																		    Real_Value := TO_INT(Actual_Velocity_RPM),
+																		    Ranking := J_E_Test_Ranking.Not_OK,
+															   				Comment := 'Fault');
+										ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+												msgFmtStr := 'irgend ein fehler',
+												strArg := '');
+										Target_State := E_Statemachine_State.Switch_on_disabled;
+										e_Controlword_Send := Wait_For_Send;
+										e_Stop_Testing_State_Machine := Start_Drive;
+									END_IF
+									
+								//---After Quickstop and STO stopping the drive is not supposed to run with reset
+								No_Start_After_Reset:	
+									IF ABS(Actual_Velocity_RPM) < Stop_Tolerance THEN
+										J_Make_Message(Testing_Mode := e_Stop_Mode,
+														   Operation_Mode := e_Operation_Mode,
+														   Desired_Value := 0,
+														   Real_Value := TO_INT(Actual_Velocity_RPM),
+														   Ranking := J_E_Test_Ranking.OK,
+														   Comment := 'Its not supposed to start');
+										ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+												  msgFmtStr := 'No Start after reset, passt',
+												  strArg := '');
+										
+									ELSIF ABS(Actual_Velocity_RPM) > Stop_Tolerance THEN 
+										J_Make_Message(Testing_Mode := e_Stop_Mode,
+														   Operation_Mode := e_Operation_Mode,
+														   Desired_Value := 0,
+														   Real_Value := TO_INT(Actual_Velocity_RPM),
+														   Ranking := J_E_Test_Ranking.Not_OK,
+														   Comment := 'Its not supposed to start');
+										ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+											msgFmtStr := 'Start after reset passt nicht !',
+											strArg := '');
+									END_IF
+									
+									// After check for running the Drive needs to start again
+									// Kann man zusammen fassen da STO1 und 2 schon gesetzt wurden unten
+									IF e_Stop_Mode = J_E_Stop_Modes.Quick_Stop THEN  // Reset for quickstop
+											Target_State := E_Statemachine_State.Operation_enabled;
+											e_Controlword_Send := Wait_For_Send;
+											Check_Start_Delay_Timer := TRUE;	
 	
-		CASE e_Operation_Mode OF
-		//----------testing in Profile Position Mode---------------------
-			e_Operation_Mode.Profile_position_mode, e_Operation_Mode.Velocity_mode:
-				//-------------------------------------------------------
-				CASE e_Stop_Mode OF
-				//Trigger Stopp and start timer
-					Switch_On:
-						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switched_on);						
-						fbTON(IN := Start_Timer);
-						e_Stop_Type := Idle_Output_Stage;
-						
-					Shutdown:
-						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Ready_to_switch_on);						
-						fbTON(IN := Start_Timer);
-						e_Stop_Type := Idle_Output_Stage;
-						
-					Switch_On_Disabled:
-						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switch_on_disabled);						
-						fbTON(IN := Start_Timer);
-						e_Stop_Type := Idle_Output_Stage;
-						
-					Vel_To_Zero:
-						PDO.Target_velocity := 0; // idk if Target or profile velocity
-						PDO.Profile_velocity := 0;
-						fbTON(IN := Start_Timer);
-						e_Operation_Mode.Profile_position_mode , e_Operation_Mode.Velocity_mode:
-							e_Stop_Type := Vel_Zero;
-						e_Operation_Mode.Velocity_mode:
-							e_Stop_Type := Ramp_Down_AFAP;
-						
-					Halt:
-						//Trigger Stopp
-						JST_Controlword := JST_Controlword OR E_Controlword_Bits.Halt;
-						fbTON(IN := Start_Timer, PT := Stop_Time_AFAP + T#200MS );
-						e_Stop_Type := Ramp_Down_AFAP;
-						
-					Quick_Stop:
-						//Trigger Stopp
-						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Quick_stop_active);
-						fbTON(IN := Start_Timer, PT := Stop_Time_AFAP + T#200MS );
-						e_Stop_Type := Ramp_Down_AFAP;
-						
-					Fault: // Ideen sammeln wie man einen Fehler schmeißt
-						//Trigger Stopp
-						JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Fault);
-						e_Stop_Type := Idle_Output_Stage;
-						
-					STO1:
-						//Trigger Stopp
-						OutputSTO1 := FALSE;
-						e_Stop_Type := Idle_Output_Stage;
-						
-					STO2:
-						//Trigger Stopp
-						OutputSTO2 := FALSE;
-						e_Stop_Type := Idle_Output_Stage;
+									ELSIF e_Stop_Mode = J_E_Stop_Modes.STO1  OR e_Stop_Mode = J_E_Stop_Modes.STO2 THEN
+										Target_State := E_Statemachine_State.Operation_enabled;
+										e_Controlword_Send := Wait_For_Send;
+										Check_Start_Delay_Timer := TRUE;
+									END_IF	
+									e_Start_Type := Start_After_Reset;
+								END_CASE
+							
+						E_Mode_of_operation.Profile_torque_mode: // muss man nochmal liebe angedeihen lassen
+							// check torque
+							IF PDO.Statusword = E_Statusword_Bits.Target_reached THEN
+								IF Actual_Velocity_RPM > 3000 THEN
+									(*fb_Message_Logging(Testing_Mode := 'Check_Start_Drive_Condition',
+													   Operation_Mode := e_Operation_Mode,
+													   Desired_Value := 3000,
+													   Real_Value := TO_INT(Actual_Velocity_RPM),
+													   Ranking := J_E_Test_Ranking.OK,
+													   Comment := 'Drive started with 200 Promill Torque');*)
+													   
+									e_Stop_Testing_State_Machine := Stop_Testing;
+												   
+								ELSIF Actual_Velocity_RPM < 3000 THEN
+									(*fb_Message_Logging(Testing_Mode := 'Check_Start_Drive_Condition',
+													   Operation_Mode := e_Operation_Mode,
+													   Desired_Value := 3000,
+													   Real_Value := TO_INT(Actual_Velocity_RPM),
+													   Ranking := J_E_Test_Ranking.OK,
+													   Comment := 'Drive no 200 Promill Torque');*)
+								END_IF
+							END_IF
+					END_CASE
+				END_IF
+		//____________ _____Change Stop testing State____________________________	
+			Change_Stop_Testing_State:
+					CASE e_Stop_Mode OF
+						J_E_Stop_Modes.Switch_On			:	e_Stop_Mode := J_E_Stop_Modes.Shutdown;			
+						J_E_Stop_Modes.Shutdown				:	e_Stop_Mode := J_E_Stop_Modes.Switch_On_Disabled;	
+						J_E_Stop_Modes.Switch_On_Disabled	:	e_Stop_Mode := J_E_Stop_Modes.Vel_To_Zero;
+						J_E_Stop_Modes.Vel_To_Zero			:	e_Stop_Mode := J_E_Stop_Modes.Halt;
+						J_E_Stop_Modes.Halt					:	e_Stop_Mode := J_E_Stop_Modes.Quick_Stop;
+						J_E_Stop_Modes.Quick_Stop			:   e_Stop_Mode := J_E_Stop_Modes.STO1;
+						J_E_Stop_Modes.STO1					:	e_Stop_Mode := J_E_Stop_Modes.STO2;
+						J_E_Stop_Modes.STO2					:	e_Stop_Mode := J_E_Stop_Modes.Switch_On;		
+						//J_E_Stop_Modes.Fault				:	e_Stop_Mode := J_E_Stop_Modes.Switch_On;
+					END_CASE
+					e_Stop_Testing_State_Machine := Stop_Testing;
+		//__________________Stop Testing SM______________________________________		
+			Stop_Testing:
 
+				CASE e_Operation_Mode OF
+				//----------testing in Profile Position Mode---------------------
+					E_Mode_of_operation.Profile_position_mode, E_Mode_of_operation.Velocity_mode, 
+					E_Mode_of_operation.Profile_velocity_mode, E_Mode_of_operation.Profile_torque_mode:      // Case kann man eigenlich weglassen, da in jedem mode gleich
+						//-------------------------------------------------------
+						CASE e_Stop_Mode OF
+						//Trigger Stopp and start timer
+							J_E_Stop_Modes.Switch_On:
+								//JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switched_on);	
+								Target_State := E_Statemachine_State.Switched_on;					
+								Stop_Timer := TRUE;
+								e_Stop_Type := Idle_Output_Stage;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Switch on',
+						  						strArg := '');
+								
+							J_E_Stop_Modes.Shutdown:
+								//JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Ready_to_switch_on);		
+								Target_State := E_Statemachine_State.Ready_to_switch_on;				
+								Stop_Timer := TRUE;
+								e_Stop_Type := Idle_Output_Stage;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Shutdown',
+						  						strArg := '');
+								
+							J_E_Stop_Modes.Switch_On_Disabled:
+								//JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Switch_on_disabled);	
+								Target_State := E_Statemachine_State.Switch_on_disabled;					
+								Stop_Timer := TRUE;
+								e_Stop_Type := Idle_Output_Stage;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Switch_On_Disabled',
+						  						strArg := '');
+								
+							J_E_Stop_Modes.Vel_To_Zero: //  Torque to Zero
+								PDO.Target_velocity := 0; // idk if Target or profile velocity
+								PDO.vl_target_velocity := 0;
+								PDO.Profile_velocity := 0;
+								PDO.Target_torque := 0;
+								Stop_Timer := TRUE;
+								IF e_Operation_Mode = E_Mode_of_operation.Profile_position_mode OR e_Operation_Mode = E_Mode_of_operation.Profile_velocity_mode THEN
+									e_Stop_Type := Vel_Zero; // was passiert hier im Torque mode?
+								ELSIF e_Operation_Mode = E_Mode_of_operation.Velocity_mode THEN
+									e_Stop_Type := Ramp_Down_AFAP;
+								ELSIF e_Operation_Mode = E_Mode_of_operation.Profile_torque_mode THEN
+									e_Stop_Type := Idle_Output_Stage;
+								END_IF
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Vel_To_Zero',
+						  						strArg := '');
+							J_E_Stop_Modes.Halt:
+								//Trigger Stopp
+								JST_Controlword := JST_Controlword OR E_Controlword_Bits.Halt;
+								Send_Controlword_Direct := TRUE;
+								StopTimer(PT := Stop_Time_AFAP + T#200MS );
+								Stop_Timer := TRUE;
+								e_Stop_Type := Ramp_Down_AFAP;	
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Halt',
+						  						strArg := '');
+							J_E_Stop_Modes.Quick_Stop:
+								//Trigger Stopp
+								//JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Quick_stop_active);
+								Target_State := E_Statemachine_State.Quick_stop_active;
+								StopTimer(PT := T#15000MS );
+								Stop_Timer := TRUE;
+								e_Stop_Type := Ramp_Down_AFAP;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Quick_Stop',
+						  						strArg := '');
+								
+							J_E_Stop_Modes.STO1:
+								//Trigger Stopp
+								OutputSTO1 := FALSE;
+								Stop_Timer := TRUE;
+								e_Stop_Type := Idle_Output_Stage;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'STO1',
+						  						strArg := '');
+		
+							J_E_Stop_Modes.STO2:
+								//Trigger Stopp
+								OutputSTO2 := FALSE;
+								Stop_Timer := TRUE;
+								e_Stop_Type := Idle_Output_Stage;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'STO2',
+						  						strArg := '');
+												
+							J_E_Stop_Modes.Fault: // Ideen sammeln wie man einen Fehler schmeißt
+								//Trigger Stopp 																															// hier geht es morgen weiter
+								//JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Fault);
+								Target_State := E_Statemachine_State.Fault;
+								StopTimer(PT := Toff);
+								Stop_Timer := TRUE;
+								e_Stop_Type := Idle_Output_Stage;
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Fault',
+						  						strArg := '');
+						END_CASE
+						
+						e_Stop_Testing_State_Machine := Check_Stop_Drive_Condition;
+						e_Controlword_Send := Wait_For_Send;
 				END_CASE
 				
-			e_Operation_Mode.Profile_velocity_mode:
-				;
-			e_Operation_Mode.Profile_torque_mode:
-				;
-		END_CASE
-		e_Stop_Testing_State_Machine := Check_Stop_Drive_Condition;
-		
-//________________________Check Drive Stop_______________________________		
-	Check_Stop_Drive_Condition:
-		
-		CASE e_Stop_Type OF
-			
-			Idle_Output_Stage:
-				// Check for Idle
-				IF ABS(PDO.Velocity_actual_value) < Stop_Tolerance AND fbTon.Q = FALSE THEN
-					fbTON(ET => Elapsed_Time, IN := Reset_Timer);
-					fb_Message_Logging(Testing_Mode := 'Statemachine Stopping',
-									   Operation_Mode := e_Operation_Mode,
-									   Desired_Value := TIME_TO_INT(Toff),
-									   Real_Value := TIME_TO_INT(Elapsed_Time),
-									   Ranking := J_E_Test_Ranking.OK,
-									   Comment := 'PowerStage enabled, Vel=0 in < 2s');
-					e_Stop_Testing_State_Machine := Start_Drive;
-				   
-				ELSIF fbTON.Q = TRUE AND ABS(PDO.Velocity_actual_value) > Stop_Tolerance  THEN
-					fb_Message_Logging(Testing_Mode := 'Statemachine Stopping',
-									   Operation_Mode := e_Operation_Mode,
-									   Desired_Value := TIME_TO_INT(Toff),
-									   Real_Value := TIME_TO_INT(Elapsed_Time),
-									   Ranking := J_E_Test_Ranking.Issues,
-									   Comment := 'PowerStage enabled, Vel>0 after 2s');
-					e_Stop_Testing_State_Machine := Start_Drive;
-			
-				ELSIF fbTON.Q = TRUE AND ABS(PDO.Velocity_actual_value) < Stop_Tolerance  THEN
-					fb_Message_Logging(Testing_Mode := 'Statemachine Stopping',
-									   Operation_Mode := e_Operation_Mode,
-									   Desired_Value := TIME_TO_INT(Toff),
-									   Real_Value := TIME_TO_INT(Elapsed_Time),
-									   Ranking := J_E_Test_Ranking.Issues,
-									   Comment := 'PowerStage enabled, Vel=0 after 2s');
-					e_Stop_Testing_State_Machine := Start_Drive;
-				END_IF
-			//--------------------------------------------------------------	
-			Ramp_Down_AFAP:
-				IF PDO.Velocity_actual_value < Stop_Tolerance AND fbTON.Q = TRUE THEN
-					fbTON(ET => Elapsed_Time, IN := Reset_Timer);
-					IF Elapsed_Time < Stop_Time_AFAP THEN
-						fb_Message_Logging(Testing_Mode := 'Ramp Down As Fast As Possible',
-										   Operation_Mode := e_Operation_Mode,
-										   Desired_Value := TIME_TO_INT(Stop_Time_AFAP),
-										   Real_Value := TIME_TO_INT(Elapsed_Time),
-										   Ranking := J_E_Test_Ranking.OK,
-										   Comment := 'Time to Ramp Down < 500MS');
-						e_Stop_Testing_State_Machine := Start_Drive;
-					END_IF
-				ELSIF fbTON.Q = FALSE THEN
-						fb_Message_Logging(Testing_Mode := 'Ramp Down As Fast As Possible',
-										   Operation_Mode := e_Operation_Mode,
-										   Desired_Value := TIME_TO_INT(Stop_Time_AFAP),
-										   Real_Value := TIME_TO_INT(Elapsed_Time),
-										   Ranking := J_E_Test_Ranking.Not_OK,
-										   Comment := 'Time to Ramp Down > 500MS ');
-						e_Stop_Testing_State_Machine := Start_Drive;
-				END_IF
-			//--------------------------------------------------------------
-			Vel_Zero:
-				//-------------------Profile Position Mode------------------
-				IF e_Operation_Mode = e_Operation_Mode.Profile_position_mode AND fbTon.Q = TRUE THEN
-					IF ABS(PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity) < Vel_Tolerance THEN
-						fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-										   Operation_Mode := e_Operation_Mode,
-										   Desired_Value := TO_INT(JST_Profile_velocity_parameters.vl_target_velocity),
-										   Real_Value := TO_INT(PDO.Velocity_actual_value),
-										   Ranking := J_E_Test_Ranking.OK,
-										   Comment := 'No velocity Zero in PPM');
-						e_Stop_Testing_State_Machine := Start_Drive;							   
-					ELSIF (PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity) > Vel_Tolerance THEN
-						fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-										   Operation_Mode := e_Operation_Mode,
-										   Desired_Value := TO_INT(JST_Profile_velocity_parameters.vl_target_velocity),
-										   Real_Value := TO_INT(PDO.Velocity_actual_value),
-										   Ranking := J_E_Test_Ranking.OK,
-										   Comment := 'No velocity Zero in PPM');
-						e_Stop_Testing_State_Machine := Start_Drive;
-					ELSE
-						fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-										   Operation_Mode := e_Operation_Mode,
-										   Desired_Value := TO_INT(JST_Profile_velocity_parameters.vl_target_velocity),
-										   Real_Value := TO_INT(PDO.Velocity_actual_value),
-										   Ranking := J_E_Test_Ranking.Not_OK,
-										   Comment := 'Vel not 0 and not desired value');
-						e_Stop_Testing_State_Machine := Start_Drive;
-					END_IF
-					fbTON(IN := Reset_Timer);
-				//----------------------Profile Velocity Mode-----------------------	
-				//  Test if Ramp at 50% down is ok
-				ELSIF e_Operation_Mode = e_Operation_Mode.Profile_velocity_mode AND fbTon.Q = FALSE THEN
-					IF ABS(PDO.Velocity_actual_value - JST_Profile_velocity_parameters.vl_target_velocity/2) < Vel_Tolerance THEN
-						fbTON(ET => Elapsed_Time);
-						IF TO_DWORD(Time_Tolerance) > ABS(TO_DWORD(Elapsed_Time)-TO_DWORD(JST_Profile_velocity_parameters.vl_target_velocity)/JST_Profile_velocity_parameters.vl_velocity_deceleration)/2 THEN
-							fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-									   		   Operation_Mode := e_Operation_Mode,
-									   		   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity/2,
-									  		   Real_Value := PDO.Velocity_actual_value,
-									   		   Ranking := J_E_Test_Ranking.OK,
-									   		   Comment := '50% Ramp Down OK');
-						ELSE 
-							fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-									   		   Operation_Mode := e_Operation_Mode,
-									   		   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity,
-									  		   Real_Value := PDO.Velocity_actual_value,
-									   		   Ranking := J_E_Test_Ranking.Not_OK,
-									   		   Comment := '50% Ramp Down not OK');
+				
+		//________________________Check Drive Stop_______________________________		
+			Check_Stop_Drive_Condition:
+				
+				CASE e_Stop_Type OF
+					
+					Idle_Output_Stage:
+						// Check for Idle
+						IF ABS(Actual_Velocity_RPM) < Stop_Tolerance AND StopTimer.Q = FALSE THEN
+							Stop_Timer := FALSE;
+							J_Make_Message(Testing_Mode := e_Stop_Mode,
+											   Operation_Mode := e_Operation_Mode,
+											   Desired_Value := TIME_TO_INT(Toff),
+											   Real_Value := TIME_TO_INT(Elapsed_Time),
+											   Ranking := J_E_Test_Ranking.OK,
+											   Comment := 'PowerStage enabled, Vel=0 in < 2s');
+							ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'PowerStage enabled, Vel=0 in < 2s',
+						  						strArg := '');
 							e_Stop_Testing_State_Machine := Start_Drive;
-						END_IF
-					// check if ramp at 100% (vel = 0) is ok
-					ELSIF ABS(PDO.Velocity_actual_value) < Vel_Tolerance AND fbTon.Q = FALSE THEN
-						fbTON(ET => Elapsed_Time, IN := Reset_Timer);
-						IF TO_DWORD(Time_Tolerance) > ABS(TO_DWORD(Elapsed_Time)-TO_DWORD(JST_Profile_velocity_parameters.vl_target_velocity)/JST_Profile_velocity_parameters.vl_velocity_deceleration)/2 THEN
-							fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-									   		   Operation_Mode := e_Operation_Mode,
-									   		   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity/2,
-									  		   Real_Value := PDO.Velocity_actual_value,
-									   		   Ranking := J_E_Test_Ranking.OK,
-									   		   Comment := '100% Ramp Down OK');
-						ELSE 
-							fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-									   		   Operation_Mode := e_Operation_Mode,
-									   		   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity,
-									  		   Real_Value := PDO.Velocity_actual_value,
-									   		   Ranking := J_E_Test_Ranking.Not_OK,
-									   		   Comment := '100% Ramp Down NOT OK');
+						   
+						ELSIF StopTimer.Q = TRUE AND ABS(Actual_Velocity_RPM) > Stop_Tolerance  THEN
+							Stop_Timer:= FALSE;
+							J_Make_Message(Testing_Mode := e_Stop_Mode,
+											   Operation_Mode := e_Operation_Mode,
+											   Desired_Value := TIME_TO_INT(Toff),
+											   Real_Value := TIME_TO_INT(Elapsed_Time),
+											   Ranking := J_E_Test_Ranking.Issues,
+											   Comment := 'PowerStage enabled, Vel>0 after 2s');
+							ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'PowerStage enabled, Vel>0 in < 2s',
+						  						strArg := '');
 							e_Stop_Testing_State_Machine := Start_Drive;
+					
+						ELSIF StopTimer.Q = TRUE AND ABS(Actual_Velocity_RPM) < Stop_Tolerance  THEN
+							Stop_Timer := FALSE;
+							J_Make_Message(Testing_Mode := e_Stop_Mode,
+											   Operation_Mode := e_Operation_Mode,
+											   Desired_Value := TIME_TO_INT(Toff),
+											   Real_Value := TIME_TO_INT(Elapsed_Time),
+											   Ranking := J_E_Test_Ranking.Issues,
+											   Comment := 'PowerStage enabled, Vel=0 after 2s');
+							ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'PowerStage enabled, Vel=0 in 2s',
+						  						strArg := '');
+							e_Stop_Testing_State_Machine := Start_Drive;
+						ELSE
+							;
 						END_IF
-					ELSE 
-						//Timeout ramp longer than 2sec
-						fb_Message_Logging(Testing_Mode := 'Velocity to Zero',
-												   Operation_Mode := e_Operation_Mode.Profile_velocity_mode,
-												   Desired_Value := JST_Profile_velocity_parameters.vl_target_velocity,
-												   Real_Value := PDO.Velocity_actual_value,
+					//--------------------------------------------------------------	
+					Ramp_Down_AFAP:
+						IF StopTimer.Q = FALSE AND Actual_Velocity_RPM < Stop_Tolerance THEN
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+												   Operation_Mode := e_Operation_Mode,
+												   Desired_Value := TIME_TO_INT(Stop_Time_AFAP),
+												   Real_Value := TIME_TO_INT(Elapsed_Time),
+												   Ranking := J_E_Test_Ranking.OK,
+												   Comment := 'Time to Ramp Down < 500MS');
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Time to Ramp Down < 500MS',
+						  						strArg := '');
+								e_Stop_Testing_State_Machine := Start_Drive;
+								Stop_Timer := FALSE;
+
+						ELSIF StopTimer.Q = TRUE AND Actual_Velocity_RPM < Stop_Tolerance THEN
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+												   Operation_Mode := e_Operation_Mode,
+												   Desired_Value := TIME_TO_INT(Stop_Time_AFAP),
+												   Real_Value := TIME_TO_INT(Elapsed_Time),
 												   Ranking := J_E_Test_Ranking.Not_OK,
-												   Comment := 'Time failure while ramp down');
-						e_Stop_Testing_State_Machine := Start_Drive;
-					END_IF
-				END_IF
-				;
-			Quick_Stop:
-				;
-		END_CASE
-		
-		
-//_____________________Start Drive Again___________________________________________	
-	Start_Drive: 
-	
-		CASE e_Stop_Mode OF
-			
-			Switch_On:
-				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);	
-				e_Stop_Mode := Shutdown;
-				e_Start_Type := Start_After_Reset;					
-			Shutdown:
-				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
-				e_Stop_Mode := Switch_On_Disabled;	
-				e_Start_Type := Start_After_Reset;					
-			Switch_On_Disabled:
-				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
-				e_Stop_Mode := Vel_To_Zero;
-				e_Start_Type := Start_After_Reset;
-			Vel_To_Zero:
-				PDO.Target_velocity := 1000; // No vel to zero in PPM
-				e_Stop_Mode := Halt;
-				e_Start_Type := Start_After_Reset;
-			Halt:
-				JST_Controlword := JST_Controlword AND NOT E_Controlword_Bits.Halt;
-				e_Stop_Mode := Quick_Stop;
-				e_Start_Type := Start_After_Reset;
-			Quick_Stop:
-				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, E_statemachine_state.Operation_enabled);
-				fbTON(IN := Start_Timer,PT := T#1000MS);
-				e_Stop_Mode := Fault;
-				e_Start_Type := No_Start_after_Reset;
-			Fault:
-				//Start again
-				e_Stop_Mode := STO1;
-			STO1:
-				OutputSTO1 := TRUE;
-				fbTON(IN := Start_Timer,PT := T#1000MS);
-				e_Start_Type := No_Start_after_Reset;
-				e_Stop_Mode := STO2;
-			STO2:
-				OutputSTO1 := TRUE;
-				fbTON(IN := Start_Timer,PT := T#1000MS);
-				e_Start_Type := No_Start_after_Reset;
-				e_Stop_Mode := Switch_On;
+												   Comment := 'Time to Ramp Down > 500MS ');
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Time to Ramp Down > 500MS',
+						  						strArg := '');
+								e_Stop_Testing_State_Machine := Start_Drive;
+								Stop_Timer := FALSE;
+								
+						ELSIF StopTimer.Q = TRUE AND Actual_Velocity_RPM > Stop_Tolerance THEN
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+												   Operation_Mode := e_Operation_Mode,
+												   Desired_Value := TIME_TO_INT(Stop_Time_AFAP),
+												   Real_Value := TIME_TO_INT(Elapsed_Time),
+												   Ranking := J_E_Test_Ranking.Not_OK,
+												   Comment := 'No Ramp Down');
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'No Ramp Down',
+						  						strArg := '');
+								e_Stop_Testing_State_Machine := Start_Drive;
+								Stop_Timer := FALSE;
+						END_IF
+					//--------------------------------------------------------------
+					Vel_Zero:
+						//-------------------Profile Position Mode------------------
+						IF e_Operation_Mode = E_Mode_of_operation.Profile_position_mode AND StopTimer.Q = TRUE THEN
+							IF ABS(Actual_Velocity_RPM - JST_Profile_velocity_parameters.Target_velocity) < Vel_Tolerance THEN
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+												   Operation_Mode := e_Operation_Mode,
+												   Desired_Value := TO_INT(JST_Profile_velocity_parameters.Target_velocity),
+												   Real_Value := TO_INT(Actual_Velocity_RPM),
+												   Ranking := J_E_Test_Ranking.OK,
+												   Comment := 'No velocity Zero in PPM');
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'No velocity Zero in PPM',
+						  						strArg := '');
+								e_Stop_Testing_State_Machine := Start_Drive;	
+								Stop_Timer := FALSE;						   
+							ELSIF (Actual_Velocity_RPM - JST_Profile_velocity_parameters.Target_velocity) > Vel_Tolerance THEN			//Nachdenken
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+												   Operation_Mode := e_Operation_Mode,
+												   Desired_Value := TO_INT(JST_Profile_velocity_parameters.Target_velocity),
+												   Real_Value := TO_INT(Actual_Velocity_RPM),
+												   Ranking := J_E_Test_Ranking.OK,
+												   Comment := 'No velocity Zero in PPM');
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'No velocity Zero in PPM',
+						  						strArg := '');
+								e_Stop_Testing_State_Machine := Start_Drive;
+								Stop_Timer := FALSE;
+							ELSE
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+												   Operation_Mode := e_Operation_Mode,
+												   Desired_Value := TO_INT(JST_Profile_velocity_parameters.Target_velocity),
+												   Real_Value := TO_INT(Actual_Velocity_RPM),
+												   Ranking := J_E_Test_Ranking.Not_OK,
+												   Comment := 'Vel not 0 and not desired value');
+								ADSLOGSTR(msgCtrlMask := ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG,
+						  						msgFmtStr := 'Vel not 0 and not desired value',
+						  						strArg := '');
+								e_Stop_Testing_State_Machine := Start_Drive;
+								Stop_Timer := FALSE;
+							END_IF
+							
+						//----------------------Profile Velocity Mode-----------------------	
+						//  Test if Ramp at 50% down is ok
+						ELSIF e_Operation_Mode = E_Mode_of_operation.Profile_velocity_mode AND StopTimer.Q = FALSE THEN
+							IF ABS(Actual_Velocity_RPM - JST_Profile_velocity_parameters.Target_velocity/2) < Vel_Tolerance THEN
+								StopTimer(ET => Elapsed_Time);
+								IF TO_DWORD(Time_Tolerance) > ABS(TO_DWORD(Elapsed_Time)-TO_DWORD(JST_Profile_velocity_parameters.Target_velocity)/JST_Profile_velocity_parameters.Profile_deceleration)/2 THEN
+									J_Make_Message(Testing_Mode := e_Stop_Mode,
+													   Operation_Mode := e_Operation_Mode,
+													   Desired_Value := JST_Profile_velocity_parameters.Target_velocity/2,
+													   Real_Value := TO_INT(Actual_Velocity_RPM),
+													   Ranking := J_E_Test_Ranking.OK,
+													   Comment := '50% Ramp Down OK');
+								ELSE 
+									J_Make_Message(Testing_Mode := e_Stop_Mode,
+													   Operation_Mode := e_Operation_Mode,
+													   Desired_Value := JST_Profile_velocity_parameters.Target_velocity,
+													   Real_Value := TO_INT(Actual_Velocity_RPM),
+													   Ranking := J_E_Test_Ranking.Not_OK,
+													   Comment := '50% Ramp Down not OK');
+									e_Stop_Testing_State_Machine := Start_Drive;
+								END_IF
+							// check if ramp at 100% (vel = 0) is ok
+							ELSIF ABS(Actual_Velocity_RPM) < Vel_Tolerance AND StopTimer.Q = FALSE THEN
+								Stop_Timer := FALSE;
+								IF TO_DWORD(Time_Tolerance) > ABS(TO_DWORD(Elapsed_Time)-TO_DWORD(JST_Profile_velocity_parameters.Target_velocity)/JST_Profile_velocity_parameters.Profile_deceleration)/2 THEN
+									J_Make_Message(Testing_Mode := e_Stop_Mode,
+													   Operation_Mode := e_Operation_Mode,
+													   Desired_Value := JST_Profile_velocity_parameters.Target_velocity/2,
+													   Real_Value := TO_INT(Actual_Velocity_RPM),
+													   Ranking := J_E_Test_Ranking.OK,
+													   Comment := '100% Ramp Down OK');
+								ELSE 
+									J_Make_Message(Testing_Mode := e_Stop_Mode,
+													   Operation_Mode := e_Operation_Mode,
+													   Desired_Value := JST_Profile_velocity_parameters.Target_velocity,
+													   Real_Value := TO_INT(Actual_Velocity_RPM),
+													   Ranking := J_E_Test_Ranking.Not_OK,
+													   Comment := '100% Ramp Down NOT OK');
+									e_Stop_Testing_State_Machine := Start_Drive;
+								END_IF
+							ELSE 
+								//Timeout ramp longer than 2sec
+								J_Make_Message(Testing_Mode := e_Stop_Mode,
+														   Operation_Mode := E_Mode_of_operation.Profile_velocity_mode,
+														   Desired_Value := JST_Profile_velocity_parameters.Target_velocity,
+														   Real_Value := TO_INT(Actual_Velocity_RPM),
+														   Ranking := J_E_Test_Ranking.Not_OK,
+														   Comment := 'Time failure while ramp down');
+								e_Stop_Testing_State_Machine := Start_Drive;
+							END_IF
+						END_IF		
+				END_CASE
 				
+				IF e_Stop_Testing_State_Machine = Start_Drive THEN
+						Start_Delay_Timer := TRUE;
+				END_IF
+				
+		// Statechange nach Check start drive condition		
+		//_____________________Start Drive Again___________________________________________	
+			Start_Drive: 
+				IF StartDelayTimer.Q THEN
+					Start_Delay_Timer := FALSE;
+					CASE e_Stop_Mode OF
+						J_E_Stop_Modes.Switch_On:
+							Target_State := E_Statemachine_State.Operation_enabled;	
+							e_Controlword_Send := Wait_For_Send;
+							//e_Stop_Mode := J_E_Stop_Modes.Shutdown;
+							e_Start_Type := Start_After_Reset;					
+						J_E_Stop_Modes.Shutdown:
+							Target_State := E_Statemachine_State.Operation_enabled;
+							e_Controlword_Send := Wait_For_Send;
+							//e_Stop_Mode := J_E_Stop_Modes.Switch_On_Disabled;	
+							e_Start_Type := Start_After_Reset;					
+						J_E_Stop_Modes.Switch_On_Disabled:
+							Target_State := E_Statemachine_State.Operation_enabled;
+							e_Controlword_Send := Wait_For_Send;
+							//e_Stop_Mode := J_E_Stop_Modes.Vel_To_Zero;
+							e_Start_Type := Start_After_Reset;
+						J_E_Stop_Modes.Vel_To_Zero:
+							PDO.Target_velocity := JST_Profile_velocity_parameters.Target_velocity; // No vel to zero in PPM
+							PDO.vl_target_velocity := TO_INT(JST_Profile_velocity_parameters.Target_velocity);
+							//e_Stop_Mode := J_E_Stop_Modes.Halt;
+							e_Start_Type := Start_After_Reset;
+						J_E_Stop_Modes.Halt:
+							JST_Controlword := JST_Controlword AND NOT E_Controlword_Bits.Halt;    // muss man noch schauen wie man das in die SM integriert
+							Send_Controlword_Direct := TRUE;
+							e_Controlword_Send := Wait_For_Send;
+							//e_Stop_Mode := J_E_Stop_Modes.Quick_Stop;
+							e_Start_Type := Start_After_Reset;
+						J_E_Stop_Modes.Quick_Stop:
+							JST_Controlword := 16#000F;
+							Send_Controlword_Direct := TRUE;
+							e_Controlword_Send := Wait_For_Send;
+							//StopTimer(PT := T#1000MS);		//Quickstopramp to slow
+							//StaStop_Timer TRUE;
+							//e_Stop_Mode := J_E_Stop_Modes.STO1;
+							e_Start_Type := No_Start_after_Reset;
+						J_E_Stop_Modes.STO1:
+							OutputSTO1 := TRUE;
+							//StopTimer(IN := StaStop_Timer := T#1000MS);  // Timer fuuuu
+							e_Start_Type := No_Start_after_Reset;
+							//e_Stop_Mode := J_E_Stop_Modes.STO2;
+						J_E_Stop_Modes.STO2:
+							OutputSTO2 := TRUE;
+							//StopTimer(IN := StaStop_Timer := T#1000MS);
+							//e_Stop_Mode := Fault;
+							e_Start_Type := No_Start_after_Reset;
+							//e_Stop_Mode := J_E_Stop_Modes.Switch_On;   // Start Again
+							
+						J_E_Stop_Modes.Fault:
+							//Start again
+							//e_Start_Type := No_Start_after_Reset;
+							//e_Stop_Mode := J_E_Stop_Modes.Switch_On;
+					
+					END_CASE
+					e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
+					Check_Start_Delay_Timer := TRUE;
+				END_IF
+
+		//_________________________Error Handling_______________________________
+			Error_Handling:
+				;
 		END_CASE
-		e_Stop_Testing_State_Machine := Check_Start_Drive_Condition;
-//_________________________Error Handling_______________________________
-	Error_Handling:
-		;
-END_CASE]]></ST>
+		
+		
+		
+	Wait_For_Send:
+		IF NOT Send_Controlword_Direct THEN
+			IF JST_Current_State = Target_State THEN
+				e_Controlword_Send := Continue_SM;
+			ELSE
+				JST_Controlword := CONTROLWORD_STATE_CHANGE(JST_Current_State, Target_State);
+				e_Controlword_Send := Wait_For_Send;
+			END_IF
+		ELSIF Send_Controlword_Direct THEN
+			JST_Controlword := JST_Controlword;
+			Send_Controlword_Direct := FALSE;
+			e_Controlword_Send := Continue_SM;
+		END_IF
+END_CASE
+
+
+
+]]></ST>
     </Implementation>
     <LineIds Name="J_Stop_Testing_SM">
-      <LineId Id="668" Count="1" />
-      <LineId Id="1" Count="0" />
-      <LineId Id="46" Count="0" />
-      <LineId Id="3" Count="0" />
-      <LineId Id="5" Count="0" />
-      <LineId Id="14" Count="0" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="16" Count="0" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="47" Count="0" />
-      <LineId Id="29" Count="0" />
-      <LineId Id="6" Count="0" />
-      <LineId Id="44" Count="0" />
-      <LineId Id="614" Count="0" />
-      <LineId Id="10" Count="0" />
-      <LineId Id="45" Count="0" />
-      <LineId Id="18" Count="0" />
-      <LineId Id="20" Count="0" />
-      <LineId Id="670" Count="6" />
-      <LineId Id="282" Count="0" />
-      <LineId Id="273" Count="0" />
-      <LineId Id="276" Count="0" />
-      <LineId Id="279" Count="0" />
-      <LineId Id="291" Count="0" />
-      <LineId Id="301" Count="0" />
-      <LineId Id="527" Count="0" />
-      <LineId Id="526" Count="0" />
-      <LineId Id="288" Count="0" />
-      <LineId Id="290" Count="0" />
-      <LineId Id="274" Count="0" />
-      <LineId Id="254" Count="0" />
-      <LineId Id="21" Count="0" />
-      <LineId Id="23" Count="0" />
-      <LineId Id="127" Count="0" />
-      <LineId Id="643" Count="1" />
-      <LineId Id="651" Count="0" />
-      <LineId Id="646" Count="4" />
-      <LineId Id="645" Count="0" />
-      <LineId Id="131" Count="0" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="128" Count="1" />
-      <LineId Id="678" Count="0" />
-      <LineId Id="689" Count="0" />
-      <LineId Id="681" Count="3" />
-      <LineId Id="677" Count="0" />
-      <LineId Id="685" Count="3" />
-      <LineId Id="26" Count="0" />
-      <LineId Id="28" Count="0" />
-      <LineId Id="133" Count="0" />
-      <LineId Id="123" Count="0" />
-      <LineId Id="19" Count="0" />
-      <LineId Id="118" Count="1" />
-      <LineId Id="30" Count="0" />
-      <LineId Id="7" Count="0" />
-      <LineId Id="426" Count="1" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="43" Count="0" />
-      <LineId Id="32" Count="0" />
-      <LineId Id="567" Count="1" />
-      <LineId Id="134" Count="0" />
-      <LineId Id="302" Count="0" />
-      <LineId Id="551" Count="0" />
-      <LineId Id="412" Count="4" />
-      <LineId Id="411" Count="0" />
-      <LineId Id="632" Count="1" />
-      <LineId Id="297" Count="0" />
-      <LineId Id="418" Count="4" />
-      <LineId Id="417" Count="0" />
-      <LineId Id="298" Count="0" />
-      <LineId Id="295" Count="1" />
-      <LineId Id="294" Count="0" />
-      <LineId Id="605" Count="0" />
-      <LineId Id="597" Count="0" />
-      <LineId Id="571" Count="0" />
-      <LineId Id="578" Count="0" />
-      <LineId Id="587" Count="0" />
-      <LineId Id="581" Count="4" />
-      <LineId Id="579" Count="0" />
-      <LineId Id="589" Count="0" />
-      <LineId Id="592" Count="4" />
-      <LineId Id="591" Count="0" />
-      <LineId Id="590" Count="0" />
-      <LineId Id="608" Count="0" />
-      <LineId Id="580" Count="0" />
-      <LineId Id="609" Count="1" />
-      <LineId Id="612" Count="0" />
-      <LineId Id="626" Count="0" />
-      <LineId Id="639" Count="1" />
-      <LineId Id="611" Count="0" />
-      <LineId Id="636" Count="0" />
-      <LineId Id="570" Count="0" />
-      <LineId Id="690" Count="0" />
-      <LineId Id="38" Count="0" />
-      <LineId Id="136" Count="0" />
-      <LineId Id="140" Count="0" />
-      <LineId Id="11" Count="0" />
-      <LineId Id="519" Count="0" />
-      <LineId Id="48" Count="0" />
-      <LineId Id="152" Count="3" />
-      <LineId Id="9" Count="0" />
-      <LineId Id="213" Count="0" />
-      <LineId Id="173" Count="0" />
-      <LineId Id="341" Count="0" />
-      <LineId Id="174" Count="0" />
-      <LineId Id="304" Count="0" />
-      <LineId Id="309" Count="0" />
-      <LineId Id="177" Count="0" />
-      <LineId Id="402" Count="0" />
-      <LineId Id="178" Count="0" />
-      <LineId Id="339" Count="1" />
-      <LineId Id="181" Count="0" />
-      <LineId Id="403" Count="0" />
-      <LineId Id="182" Count="0" />
-      <LineId Id="184" Count="0" />
-      <LineId Id="428" Count="0" />
-      <LineId Id="185" Count="0" />
-      <LineId Id="404" Count="0" />
-      <LineId Id="186" Count="0" />
-      <LineId Id="188" Count="0" />
-      <LineId Id="666" Count="0" />
-      <LineId Id="432" Count="0" />
-      <LineId Id="663" Count="0" />
-      <LineId Id="665" Count="0" />
-      <LineId Id="664" Count="0" />
-      <LineId Id="189" Count="0" />
-      <LineId Id="405" Count="0" />
-      <LineId Id="190" Count="1" />
-      <LineId Id="529" Count="1" />
-      <LineId Id="193" Count="0" />
-      <LineId Id="406" Count="0" />
-      <LineId Id="194" Count="2" />
-      <LineId Id="552" Count="0" />
-      <LineId Id="197" Count="0" />
-      <LineId Id="407" Count="0" />
-      <LineId Id="198" Count="3" />
-      <LineId Id="408" Count="0" />
-      <LineId Id="202" Count="3" />
-      <LineId Id="409" Count="0" />
-      <LineId Id="206" Count="3" />
-      <LineId Id="211" Count="1" />
-      <LineId Id="220" Count="0" />
-      <LineId Id="146" Count="1" />
-      <LineId Id="143" Count="0" />
-      <LineId Id="141" Count="0" />
-      <LineId Id="12" Count="0" />
-      <LineId Id="391" Count="1" />
-      <LineId Id="475" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="116" Count="0" />
-      <LineId Id="105" Count="0" />
-      <LineId Id="229" Count="0" />
-      <LineId Id="114" Count="0" />
-      <LineId Id="221" Count="0" />
-      <LineId Id="311" Count="1" />
-      <LineId Id="320" Count="0" />
-      <LineId Id="322" Count="1" />
-      <LineId Id="325" Count="1" />
-      <LineId Id="337" Count="0" />
-      <LineId Id="541" Count="0" />
-      <LineId Id="554" Count="0" />
-      <LineId Id="316" Count="0" />
-      <LineId Id="332" Count="3" />
-      <LineId Id="317" Count="0" />
-      <LineId Id="338" Count="0" />
-      <LineId Id="555" Count="0" />
-      <LineId Id="336" Count="0" />
-      <LineId Id="616" Count="6" />
-      <LineId Id="615" Count="0" />
-      <LineId Id="313" Count="0" />
-      <LineId Id="310" Count="0" />
-      <LineId Id="223" Count="1" />
-      <LineId Id="531" Count="0" />
-      <LineId Id="533" Count="0" />
-      <LineId Id="536" Count="4" />
-      <LineId Id="534" Count="0" />
-      <LineId Id="556" Count="0" />
-      <LineId Id="535" Count="0" />
-      <LineId Id="543" Count="0" />
-      <LineId Id="546" Count="4" />
-      <LineId Id="545" Count="0" />
-      <LineId Id="557" Count="0" />
-      <LineId Id="532" Count="0" />
-      <LineId Id="473" Count="0" />
-      <LineId Id="225" Count="0" />
-      <LineId Id="478" Count="0" />
-      <LineId Id="449" Count="0" />
-      <LineId Id="453" Count="0" />
-      <LineId Id="456" Count="4" />
-      <LineId Id="454" Count="0" />
-      <LineId Id="558" Count="0" />
-      <LineId Id="466" Count="0" />
-      <LineId Id="468" Count="4" />
-      <LineId Id="467" Count="0" />
-      <LineId Id="560" Count="0" />
-      <LineId Id="655" Count="0" />
-      <LineId Id="657" Count="5" />
-      <LineId Id="656" Count="0" />
-      <LineId Id="455" Count="0" />
-      <LineId Id="654" Count="0" />
-      <LineId Id="477" Count="0" />
-      <LineId Id="522" Count="0" />
-      <LineId Id="429" Count="1" />
-      <LineId Id="433" Count="0" />
-      <LineId Id="443" Count="0" />
-      <LineId Id="461" Count="4" />
-      <LineId Id="448" Count="0" />
-      <LineId Id="490" Count="0" />
-      <LineId Id="492" Count="4" />
-      <LineId Id="491" Count="0" />
-      <LineId Id="562" Count="0" />
-      <LineId Id="438" Count="0" />
-      <LineId Id="524" Count="0" />
-      <LineId Id="479" Count="0" />
-      <LineId Id="481" Count="6" />
-      <LineId Id="480" Count="0" />
-      <LineId Id="498" Count="5" />
-      <LineId Id="497" Count="0" />
-      <LineId Id="563" Count="0" />
-      <LineId Id="434" Count="0" />
-      <LineId Id="512" Count="0" />
-      <LineId Id="525" Count="0" />
-      <LineId Id="513" Count="4" />
-      <LineId Id="511" Count="0" />
-      <LineId Id="564" Count="0" />
-      <LineId Id="431" Count="0" />
-      <LineId Id="488" Count="0" />
-      <LineId Id="226" Count="2" />
-      <LineId Id="71" Count="0" />
-      <LineId Id="520" Count="1" />
-      <LineId Id="474" Count="0" />
-      <LineId Id="342" Count="0" />
-      <LineId Id="388" Count="0" />
-      <LineId Id="384" Count="0" />
-      <LineId Id="389" Count="0" />
-      <LineId Id="345" Count="1" />
-      <LineId Id="393" Count="0" />
-      <LineId Id="572" Count="0" />
-      <LineId Id="350" Count="1" />
-      <LineId Id="394" Count="0" />
-      <LineId Id="573" Count="0" />
-      <LineId Id="355" Count="0" />
-      <LineId Id="401" Count="0" />
-      <LineId Id="357" Count="0" />
-      <LineId Id="574" Count="0" />
-      <LineId Id="359" Count="0" />
-      <LineId Id="518" Count="0" />
-      <LineId Id="395" Count="0" />
-      <LineId Id="575" Count="0" />
-      <LineId Id="363" Count="0" />
-      <LineId Id="528" Count="0" />
-      <LineId Id="396" Count="0" />
-      <LineId Id="576" Count="0" />
-      <LineId Id="367" Count="0" />
-      <LineId Id="565" Count="0" />
-      <LineId Id="586" Count="0" />
-      <LineId Id="397" Count="0" />
-      <LineId Id="577" Count="0" />
-      <LineId Id="371" Count="0" />
-      <LineId Id="374" Count="0" />
-      <LineId Id="398" Count="0" />
-      <LineId Id="375" Count="0" />
-      <LineId Id="623" Count="2" />
-      <LineId Id="399" Count="0" />
-      <LineId Id="379" Count="0" />
-      <LineId Id="627" Count="1" />
-      <LineId Id="631" Count="0" />
-      <LineId Id="400" Count="0" />
-      <LineId Id="635" Count="0" />
-      <LineId Id="385" Count="0" />
-      <LineId Id="387" Count="0" />
-      <LineId Id="630" Count="0" />
-      <LineId Id="8" Count="0" />
-      <LineId Id="13" Count="0" />
+      <LineId Id="2236" Count="0" />
+      <LineId Id="859" Count="0" />
+      <LineId Id="1662" Count="0" />
+      <LineId Id="1909" Count="0" />
+      <LineId Id="1691" Count="0" />
+      <LineId Id="860" Count="0" />
+      <LineId Id="863" Count="9" />
+      <LineId Id="1923" Count="0" />
+      <LineId Id="873" Count="36" />
+      <LineId Id="917" Count="1" />
+      <LineId Id="920" Count="2" />
+      <LineId Id="1606" Count="0" />
+      <LineId Id="1439" Count="0" />
+      <LineId Id="925" Count="18" />
+      <LineId Id="945" Count="4" />
+      <LineId Id="951" Count="9" />
+      <LineId Id="1590" Count="0" />
+      <LineId Id="1605" Count="0" />
+      <LineId Id="962" Count="8" />
+      <LineId Id="1929" Count="3" />
+      <LineId Id="975" Count="0" />
+      <LineId Id="1554" Count="1" />
+      <LineId Id="1553" Count="0" />
+      <LineId Id="976" Count="1" />
+      <LineId Id="2199" Count="6" />
+      <LineId Id="2208" Count="3" />
+      <LineId Id="2198" Count="0" />
+      <LineId Id="2213" Count="0" />
+      <LineId Id="2212" Count="0" />
+      <LineId Id="978" Count="5" />
+      <LineId Id="1702" Count="0" />
+      <LineId Id="1557" Count="1" />
+      <LineId Id="1556" Count="0" />
+      <LineId Id="2194" Count="1" />
+      <LineId Id="2214" Count="0" />
+      <LineId Id="994" Count="1" />
+      <LineId Id="1754" Count="0" />
+      <LineId Id="997" Count="0" />
+      <LineId Id="999" Count="6" />
+      <LineId Id="1697" Count="1" />
+      <LineId Id="1696" Count="0" />
+      <LineId Id="2233" Count="0" />
+      <LineId Id="1006" Count="6" />
+      <LineId Id="1700" Count="1" />
+      <LineId Id="1699" Count="0" />
+      <LineId Id="1787" Count="0" />
+      <LineId Id="2237" Count="0" />
+      <LineId Id="2234" Count="0" />
+      <LineId Id="2243" Count="0" />
+      <LineId Id="1761" Count="2" />
+      <LineId Id="1788" Count="1" />
+      <LineId Id="1764" Count="0" />
+      <LineId Id="1766" Count="1" />
+      <LineId Id="2242" Count="0" />
+      <LineId Id="1760" Count="0" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1028" Count="22" />
+      <LineId Id="1053" Count="1" />
+      <LineId Id="1596" Count="0" />
+      <LineId Id="2137" Count="0" />
+      <LineId Id="2136" Count="0" />
+      <LineId Id="2138" Count="0" />
+      <LineId Id="2140" Count="0" />
+      <LineId Id="2145" Count="0" />
+      <LineId Id="2150" Count="0" />
+      <LineId Id="2158" Count="0" />
+      <LineId Id="2160" Count="0" />
+      <LineId Id="2166" Count="0" />
+      <LineId Id="2174" Count="0" />
+      <LineId Id="2179" Count="0" />
+      <LineId Id="2188" Count="0" />
+      <LineId Id="1595" Count="0" />
+      <LineId Id="2190" Count="0" />
+      <LineId Id="1056" Count="1" />
+      <LineId Id="1062" Count="12" />
+      <LineId Id="1561" Count="1" />
+      <LineId Id="1560" Count="0" />
+      <LineId Id="1075" Count="5" />
+      <LineId Id="1564" Count="1" />
+      <LineId Id="1563" Count="0" />
+      <LineId Id="1081" Count="5" />
+      <LineId Id="1580" Count="1" />
+      <LineId Id="1579" Count="0" />
+      <LineId Id="1087" Count="2" />
+      <LineId Id="1682" Count="0" />
+      <LineId Id="1090" Count="9" />
+      <LineId Id="1583" Count="1" />
+      <LineId Id="1582" Count="0" />
+      <LineId Id="1100" Count="2" />
+      <LineId Id="1685" Count="0" />
+      <LineId Id="1103" Count="0" />
+      <LineId Id="1609" Count="0" />
+      <LineId Id="1104" Count="0" />
+      <LineId Id="1615" Count="1" />
+      <LineId Id="1614" Count="0" />
+      <LineId Id="1105" Count="4" />
+      <LineId Id="1610" Count="0" />
+      <LineId Id="1110" Count="0" />
+      <LineId Id="1618" Count="1" />
+      <LineId Id="1617" Count="0" />
+      <LineId Id="1111" Count="0" />
+      <LineId Id="1119" Count="4" />
+      <LineId Id="1624" Count="1" />
+      <LineId Id="1623" Count="0" />
+      <LineId Id="1124" Count="5" />
+      <LineId Id="1627" Count="1" />
+      <LineId Id="1626" Count="0" />
+      <LineId Id="1904" Count="0" />
+      <LineId Id="1895" Count="8" />
+      <LineId Id="1130" Count="1" />
+      <LineId Id="1905" Count="0" />
+      <LineId Id="1132" Count="0" />
+      <LineId Id="1566" Count="0" />
+      <LineId Id="1133" Count="1" />
+      <LineId Id="1559" Count="0" />
+      <LineId Id="1136" Count="14" />
+      <LineId Id="1571" Count="1" />
+      <LineId Id="1569" Count="0" />
+      <LineId Id="1151" Count="2" />
+      <LineId Id="1776" Count="0" />
+      <LineId Id="1154" Count="5" />
+      <LineId Id="1574" Count="1" />
+      <LineId Id="1573" Count="0" />
+      <LineId Id="1160" Count="2" />
+      <LineId Id="1777" Count="0" />
+      <LineId Id="1163" Count="5" />
+      <LineId Id="1577" Count="1" />
+      <LineId Id="1576" Count="0" />
+      <LineId Id="1169" Count="0" />
+      <LineId Id="1567" Count="1" />
+      <LineId Id="1170" Count="3" />
+      <LineId Id="1176" Count="5" />
+      <LineId Id="1630" Count="1" />
+      <LineId Id="1629" Count="0" />
+      <LineId Id="1182" Count="0" />
+      <LineId Id="1667" Count="0" />
+      <LineId Id="1183" Count="7" />
+      <LineId Id="1633" Count="1" />
+      <LineId Id="1632" Count="0" />
+      <LineId Id="1191" Count="0" />
+      <LineId Id="1668" Count="0" />
+      <LineId Id="1681" Count="0" />
+      <LineId Id="1652" Count="0" />
+      <LineId Id="1671" Count="9" />
+      <LineId Id="1653" Count="0" />
+      <LineId Id="1192" Count="11" />
+      <LineId Id="1636" Count="1" />
+      <LineId Id="1635" Count="0" />
+      <LineId Id="1204" Count="0" />
+      <LineId Id="1778" Count="0" />
+      <LineId Id="1205" Count="6" />
+      <LineId Id="1639" Count="1" />
+      <LineId Id="1638" Count="0" />
+      <LineId Id="1212" Count="0" />
+      <LineId Id="1779" Count="0" />
+      <LineId Id="1213" Count="6" />
+      <LineId Id="1642" Count="1" />
+      <LineId Id="1641" Count="0" />
+      <LineId Id="1220" Count="0" />
+      <LineId Id="1780" Count="0" />
+      <LineId Id="1221" Count="53" />
+      <LineId Id="1655" Count="0" />
+      <LineId Id="1657" Count="1" />
+      <LineId Id="1656" Count="0" />
+      <LineId Id="1275" Count="4" />
+      <LineId Id="2241" Count="0" />
+      <LineId Id="1280" Count="0" />
+      <LineId Id="1282" Count="0" />
+      <LineId Id="1284" Count="4" />
+      <LineId Id="1290" Count="4" />
+      <LineId Id="1296" Count="5" />
+      <LineId Id="1683" Count="0" />
+      <LineId Id="1302" Count="3" />
+      <LineId Id="1694" Count="0" />
+      <LineId Id="1790" Count="0" />
+      <LineId Id="1306" Count="2" />
+      <LineId Id="1784" Count="1" />
+      <LineId Id="1311" Count="1" />
+      <LineId Id="1781" Count="0" />
+      <LineId Id="1916" Count="0" />
+      <LineId Id="1314" Count="0" />
+      <LineId Id="1318" Count="7" />
+      <LineId Id="1917" Count="0" />
+      <LineId Id="1326" Count="1" />
+      <LineId Id="2035" Count="0" />
+      <LineId Id="1913" Count="1" />
+      <LineId Id="2191" Count="0" />
+      <LineId Id="1912" Count="0" />
+      <LineId Id="1328" Count="2" />
+      <LineId Id="1604" Count="0" />
+      <LineId Id="1603" Count="0" />
+      <LineId Id="1598" Count="0" />
+      <LineId Id="1331" Count="7" />
+      <LineId Id="1687" Count="0" />
+      <LineId Id="1339" Count="6" />
+      <LineId Id="1689" Count="1" />
+      <LineId Id="1786" Count="0" />
+      <LineId Id="1688" Count="0" />
+      <LineId Id="1346" Count="3" />
       <LineId Id="4" Count="0" />
     </LineIds>
   </POU>
